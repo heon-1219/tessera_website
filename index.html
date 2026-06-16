@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="ko" data-lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Tessera — 통신이 끊겨도, 사람이 말하지 못해도 읽어내는 신원·응급정보 인프라</title>
+<meta name="description" content="Tessera는 전원·통신 없이 작동하는 NFC 기반 오프라인 신원·응급정보 플랫폼입니다. 병원 체크인·응급의료·산업안전을 바꾸고, 국방에서 검증합니다." />
+<meta name="theme-color" content="#11110f" />
+<link rel="icon" type="image/png" href="assets/favicon.png" />
+<meta property="og:title" content="Tessera — 신원과 생명을 읽어내는 인프라" />
+<meta property="og:description" content="전원·통신 없이 작동하는 NFC 오프라인 신원·응급정보 플랫폼. 병원·응급의료·산업안전·국방." />
+<meta property="og:image" content="assets/tessera_scanner_device.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Expanded:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+
+<style>
+:root{
+  --paper:#f3efe6;        /* warm bone paper */
+  --paper-2:#ebe6da;
+  --ink:#13130f;          /* near-black ink */
+  --ink-2:#2a2a24;
+  --muted:#615e54;        /* AA on paper & paper-2 */
+  --hair:rgba(19,19,15,.16);
+  --hair-2:rgba(19,19,15,.08);
+  --signal:#ff3d00;       /* the only accent — display/non-text only */
+  --signal-deep:#d72f00;
+  --signal-text:#c2360a;  /* accessible accent for small text labels (AA on paper) */
+  --card:#f7f4ec;
+  --ink-panel:#15150f;
+  --ink-panel-2:#1c1c14;
+  --maxw:1180px;
+  --pad:clamp(18px,4.5vw,40px);
+  --fdisp:"Archivo Expanded","Archivo","Pretendard Variable",sans-serif;
+  --fsans:"Archivo","Pretendard Variable",ui-sans-serif,system-ui,sans-serif;
+  --fkr:"Pretendard Variable","Archivo",sans-serif;
+  --fmono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:hidden;height:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--fkr);line-height:1.62;font-weight:420;
+  font-feature-settings:"ss01","cv01";
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow:hidden;max-width:100%;height:100%;   /* the deck owns scrolling */
+  word-break:keep-all;overflow-wrap:break-word;   /* Korean-friendly wrapping + safety net for long tokens */
+}
+:lang(en) body, html[data-lang="en"] body{font-family:var(--fsans)}
+::selection{background:var(--signal);color:#fff}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+button{font-family:inherit}
+h1,h2,h3,h4{margin:0;font-weight:800;letter-spacing:-.02em;line-height:1.04}
+p{margin:0}
+
+/* paper grain + faint grid texture */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(var(--hair-2) 1px,transparent 1px),
+    linear-gradient(90deg,var(--hair-2) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(circle at 50% 0%,#000,transparent 80%);
+}
+.wrap{width:min(var(--maxw), calc(100% - var(--pad)*2));margin-inline:auto;position:relative;z-index:1}
+
+/* keyboard focus + anchored-section offset under sticky nav */
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
+.dark :focus-visible,.btn.primary:focus-visible,.poster:focus-visible,.footer :focus-visible{outline-color:var(--paper)}
+.navlinks a:focus-visible::after{width:100%}
+.btn:focus-visible{background:var(--ink);color:var(--paper)}
+section[id],header.hero,#top{scroll-margin-top:80px}
+.skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--ink);color:var(--paper);font-family:var(--fmono);font-size:13px;padding:10px 16px;border-radius:8px;transition:top .2s}
+.skip:focus{top:12px}
+
+/* ---------- shared text utilities ---------- */
+.mono{font-family:var(--fmono);font-weight:500;letter-spacing:.04em}
+.kicker{font-family:var(--fmono);font-size:11.5px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.kicker b{color:var(--signal-text);font-weight:600}
+.disp{font-family:var(--fdisp);font-weight:800;letter-spacing:-.03em}
+.hl{color:var(--signal)}
+.u-ink{color:var(--ink)}
+.lead{font-size:clamp(16px,1.35vw,19px);color:var(--ink-2);max-width:62ch}
+.small{font-size:13.5px;color:var(--muted);line-height:1.6}
+
+/* ---------- barcode motif ---------- */
+.barcode{
+  height:34px;width:100%;
+  background-image:repeating-linear-gradient(90deg,
+    var(--ink) 0 2px, transparent 2px 5px,
+    var(--ink) 5px 7px, transparent 7px 12px,
+    var(--ink) 12px 16px, transparent 16px 18px,
+    var(--ink) 18px 23px, transparent 23px 26px,
+    var(--ink) 26px 28px, transparent 28px 34px,
+    var(--ink) 34px 38px, transparent 38px 41px);
+  opacity:.9;
+}
+.barcode.thin{height:16px;opacity:.55}
+.barcode.light{background-image:repeating-linear-gradient(90deg,
+    var(--paper) 0 2px, transparent 2px 5px,
+    var(--paper) 5px 7px, transparent 7px 12px,
+    var(--paper) 12px 16px, transparent 16px 18px,
+    var(--paper) 18px 23px, transparent 23px 26px,
+    var(--paper) 26px 28px, transparent 28px 34px,
+    var(--paper) 34px 38px, transparent 38px 41px)}
+
+/* ---------- nav ---------- */
+.nav{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper) 84%,transparent);backdrop-filter:blur(14px) saturate(1.2);border-bottom:1px solid var(--hair)}
+.navin{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px;min-width:0}
+.brand{display:flex;align-items:center;gap:11px;font-family:var(--fdisp);font-weight:800;letter-spacing:.02em;font-size:18px;min-width:0}
+.brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brand .bm{height:26px;width:auto;display:block}
+.navlinks{display:flex;gap:26px;align-items:center}
+.navlinks a{font-family:var(--fmono);font-size:12.5px;letter-spacing:.04em;color:var(--muted);padding:6px 0;position:relative;transition:color .25s}
+.navlinks a::after{content:"";position:absolute;left:0;bottom:0;height:1.5px;width:0;background:var(--signal);transition:width .28s ease}
+.navlinks a:hover{color:var(--ink)}.navlinks a:hover::after{width:100%}
+.navright{display:flex;align-items:center;gap:12px}
+.lang{display:inline-flex;border:1px solid var(--hair);border-radius:999px;padding:3px;background:var(--paper-2)}
+.lang button{border:0;background:transparent;color:var(--muted);font-family:var(--fmono);font-size:12px;font-weight:600;letter-spacing:.06em;padding:6px 11px;border-radius:999px;cursor:pointer;transition:.2s}
+.lang button.on{background:var(--ink);color:var(--paper)}
+.menubtn{display:none;border:1px solid var(--hair);background:var(--paper-2);border-radius:10px;width:42px;height:38px;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:4px}
+.menubtn span{display:block;width:18px;height:1.6px;background:var(--ink)}
+.mobilemenu{display:none;border-bottom:1px solid var(--hair);background:var(--paper)}
+.mobilemenu a{display:block;padding:13px var(--pad);font-family:var(--fmono);font-size:13px;color:var(--ink-2);border-top:1px solid var(--hair-2)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--fmono);font-size:13px;font-weight:600;letter-spacing:.03em;padding:13px 20px;border-radius:999px;border:1px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer;transition:.25s;white-space:nowrap}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--signal-deep);border-color:var(--signal-deep);color:#fff}
+.btn.primary:hover{background:#b62800;border-color:#b62800}
+.btn .arr{transition:transform .25s}
+.btn:hover .arr{transform:translateX(3px)}
+
+/* ---------- hero ---------- */
+.hero{padding-top:clamp(26px,4vw,42px);padding-bottom:clamp(40px,6vw,72px)}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.chip{display:inline-flex;align-items:center;gap:8px;font-family:var(--fmono);font-size:11.5px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--hair);border-radius:999px;padding:6px 12px;background:var(--card)}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 0 rgba(255,61,0,.5);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,61,0,.5)}70%{box-shadow:0 0 0 7px rgba(255,61,0,0)}100%{box-shadow:0 0 0 0 rgba(255,61,0,0)}}
+
+/* video monitor frame */
+.monitor{position:relative;border:1.5px solid var(--ink);background:#000;border-radius:6px;overflow:hidden;box-shadow:0 30px 60px -28px rgba(19,19,15,.55)}
+.monitor .vid{position:relative;width:100%;aspect-ratio:16/9;background:#000}
+.monitor iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.poster{position:absolute;inset:0;width:100%;height:100%;border:0;cursor:pointer;z-index:2;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:#000;font-family:var(--fmono)}
+.poster .posterimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.poster::before{content:"";position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at center,rgba(0,0,0,.32),rgba(0,0,0,.66))}
+.poster .playbtn{position:relative;z-index:2;width:74px;height:74px;border-radius:50%;background:var(--signal);color:#fff;display:grid;place-items:center;box-shadow:0 10px 30px rgba(255,61,0,.45);transition:transform .25s ease}
+.poster .playbtn svg{margin-left:3px}
+.poster:hover .playbtn{transform:scale(1.08)}
+.poster .ptxt{position:relative;z-index:2;color:#fff;font-size:12px;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+.hud{position:absolute;inset:0;pointer-events:none;z-index:3}
+.hud .corner{position:absolute;width:22px;height:22px;border:2px solid rgba(255,255,255,.85)}
+.hud .c1{top:12px;left:12px;border-right:0;border-bottom:0}
+.hud .c2{top:12px;right:12px;border-left:0;border-bottom:0}
+.hud .c3{bottom:12px;left:12px;border-right:0;border-top:0}
+.hud .c4{bottom:12px;right:12px;border-left:0;border-top:0}
+.hud .live{position:absolute;top:14px;left:46px;display:flex;align-items:center;gap:7px;font-family:var(--fmono);font-size:11px;letter-spacing:.14em;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.hud .live i{width:7px;height:7px;border-radius:50%;background:var(--signal);animation:pulse 1.8s infinite;display:inline-block}
+.hud .tag{position:absolute;bottom:16px;left:46px;font-family:var(--fmono);font-size:10.5px;letter-spacing:.14em;color:rgba(255,255,255,.78);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.hud .tagr{position:absolute;bottom:16px;right:46px;font-family:var(--fmono);font-size:10.5px;letter-spacing:.1em;color:rgba(255,255,255,.62);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.monitor .scanstrip{position:relative;height:20px;background:var(--ink);overflow:hidden}
+.monitor .scanstrip .bc{position:absolute;inset:0;opacity:.7;
+  background-image:repeating-linear-gradient(90deg,var(--paper) 0 2px,transparent 2px 5px,var(--paper) 5px 6px,transparent 6px 11px,var(--paper) 11px 14px,transparent 14px 16px)}
+.monitor .scanstrip .laser{position:absolute;top:0;bottom:0;width:80px;background:linear-gradient(90deg,transparent,rgba(255,61,0,.0) 10%,var(--signal),transparent);animation:sweep 3.4s linear infinite;mix-blend-mode:screen}
+@keyframes sweep{0%{left:-90px}100%{left:100%}}
+
+.herohead{margin-top:clamp(30px,4vw,46px);display:grid;grid-template-columns:1.5fr .9fr;gap:clamp(22px,4vw,52px);align-items:end}
+.herohead h1{font-family:var(--fkr);font-size:clamp(30px,5vw,58px);font-weight:800;letter-spacing:-.035em;line-height:1.04}
+html[data-lang="en"] .herohead h1{font-family:var(--fdisp);letter-spacing:-.04em}
+.herohead h1 .em{color:var(--signal)}
+.herohead .rt{display:flex;flex-direction:column;gap:18px}
+.herohead .rt p{font-size:clamp(15px,1.4vw,17.5px);color:var(--ink-2)}
+.cta{display:flex;gap:11px;flex-wrap:wrap;margin-top:6px}
+.statline{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--hair);border-radius:12px;overflow:hidden;margin-top:clamp(30px,4vw,46px);background:var(--card)}
+.statline .st{flex:1 1 180px;padding:18px 20px;border-right:1px solid var(--hair)}
+.statline .st:last-child{border-right:0}
+.statline .st b{display:block;font-family:var(--fdisp);font-size:clamp(24px,2.6vw,32px);font-weight:800;letter-spacing:-.02em;line-height:1}
+.statline .st span{font-family:var(--fmono);font-size:11px;letter-spacing:.05em;color:var(--muted);display:block;margin-top:8px}
+/* hero with dog-tag image (video moved to its own slide) */
+.herohero{display:grid;grid-template-columns:1.18fr auto;gap:clamp(26px,4vw,54px);align-items:center;margin-top:clamp(20px,3.5vh,36px)}
+.herohero .hleft h1{font-family:var(--fkr);font-size:clamp(32px,5.2vw,62px);font-weight:800;letter-spacing:-.035em;line-height:1.04;margin:0}
+html[data-lang="en"] .herohero .hleft h1{font-family:var(--fdisp);letter-spacing:-.04em}
+.herohero .hleft h1 .em{color:var(--signal)}
+.herohero .hleft p{font-size:clamp(15px,1.45vw,18.5px);color:var(--ink-2);margin-top:20px;max-width:52ch}
+.herohero .hleft .cta{margin-top:26px}
+.hfig{position:relative;border:1.5px solid var(--ink);border-radius:12px;overflow:hidden;background:#0c0c08;aspect-ratio:3/4;width:clamp(228px,25vw,300px);max-height:62vh}
+.hfig img{width:100%;height:100%;object-fit:cover;filter:grayscale(.12) contrast(1.05) brightness(.99)}
+.hfig .corner{position:absolute;width:18px;height:18px;border:2px solid rgba(255,255,255,.7);z-index:2}
+.hfig .c1{top:10px;left:10px;border-right:0;border-bottom:0}
+.hfig .c2{top:10px;right:10px;border-left:0;border-bottom:0}
+.hfig figcaption{position:absolute;left:0;right:0;bottom:0;padding:9px 14px;font-family:var(--fmono);font-size:10.5px;letter-spacing:.05em;color:rgba(255,255,255,.82);background:linear-gradient(0deg,rgba(0,0,0,.72),transparent)}
+@media(max-width:880px){.herohero{grid-template-columns:1fr;gap:20px;align-items:start;justify-items:center}.hfig{width:clamp(200px,52vw,250px);max-height:none}}
+/* dedicated video slide */
+.vidslide > .wrap{align-items:center}
+.vidwrap{width:100%;max-width:1080px;margin:0 auto}
+.vidcap{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;font-family:var(--fmono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(243,239,230,.62)}
+.vidcap .l{display:flex;align-items:center;gap:9px}
+.vidcap .l i{width:8px;height:8px;border-radius:50%;background:var(--signal);display:inline-block;animation:pulse 1.8s infinite}
+
+/* ---------- section scaffold ---------- */
+section.band{padding:clamp(56px,8vw,108px) 0;border-top:1px solid var(--hair);position:relative}
+.shead{display:flex;align-items:baseline;gap:16px;margin-bottom:clamp(18px,2.6vw,30px);flex-wrap:wrap}
+.sidx{font-family:var(--fmono);font-size:12px;font-weight:600;letter-spacing:.1em;color:var(--signal-text);border:1px solid var(--hair);border-radius:6px;padding:5px 9px;white-space:nowrap}
+.shead h2,.shead h3.sub-h{font-family:var(--fkr);font-size:clamp(26px,4vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.06;flex:1 1 320px;min-width:0}
+html[data-lang="en"] .shead h2,html[data-lang="en"] .shead h3.sub-h{font-family:var(--fdisp)}
+.shead .sp{font-family:var(--fmono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-align:right;max-width:30ch}
+
+.dark{background:var(--ink-panel);color:var(--paper);border-top-color:rgba(255,255,255,.1)}
+.dark .kicker,.dark .shead .sp{color:rgba(243,239,230,.55)}
+.dark .lead{color:rgba(243,239,230,.78)}
+.dark .sidx{border-color:rgba(255,255,255,.18)}
+.dark .shead h2{color:var(--paper)}
+.dark .small{color:rgba(243,239,230,.55)}
+
+/* ---------- cards ---------- */
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{border:1px solid var(--hair);border-radius:14px;background:var(--card);padding:clamp(20px,2.4vw,28px);position:relative;transition:transform .3s ease,box-shadow .3s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 18px 36px -26px rgba(19,19,15,.5)}
+.dark .card{background:var(--ink-panel-2);border-color:rgba(255,255,255,.1)}
+.card .tn{font-family:var(--fmono);font-size:11px;letter-spacing:.1em;color:var(--signal-text);font-weight:600}
+.dark .sidx,.dark .card .tn{color:#ff7a4d}
+.card h3{font-size:clamp(18px,1.7vw,21px);margin:12px 0 9px;letter-spacing:-.02em;line-height:1.18}
+.card p{font-size:14.5px;color:var(--ink-2)}
+.dark .card p{color:rgba(243,239,230,.74)}
+.card.tick::before{content:"";position:absolute;top:14px;right:14px;width:9px;height:9px;border-top:2px solid var(--hair);border-right:2px solid var(--hair);transition:.3s}
+.card.tick:hover::before{border-color:var(--signal);width:14px;height:14px}
+ul.ticks{list-style:none;padding:0;margin:14px 0 0}
+ul.ticks li{font-size:14px;color:var(--ink-2);padding:9px 0 9px 20px;border-top:1px solid var(--hair-2);position:relative}
+ul.ticks li:first-child{border-top:0}
+ul.ticks li::before{content:"";position:absolute;left:2px;top:16px;width:7px;height:7px;background:var(--signal);clip-path:polygon(0 0,100% 0,100% 100%)}
+.dark ul.ticks li{color:rgba(243,239,230,.78);border-color:rgba(255,255,255,.08)}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--fmono);font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
+.pill.s{background:var(--signal-deep);color:#fff;border-color:var(--signal-deep)}
+.pill.o{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* what-is split */
+.split{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(26px,4vw,56px);align-items:center}
+.figframe{position:relative;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden;background:#0c0c08}
+.figframe img{width:100%;display:block;filter:grayscale(.18) contrast(1.05) brightness(.97)}
+.figframe figcaption{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;font-family:var(--fmono);font-size:11px;letter-spacing:.05em;color:rgba(255,255,255,.82);background:linear-gradient(0deg,rgba(0,0,0,.7),transparent)}
+.figframe .corner{position:absolute;width:18px;height:18px;border:2px solid rgba(255,255,255,.7);z-index:2}
+.figframe .c1{top:10px;left:10px;border-right:0;border-bottom:0}
+.figframe .c2{top:10px;right:10px;border-left:0;border-bottom:0}
+
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+.node{border:1px solid var(--hair);border-radius:12px;padding:20px;background:var(--card)}
+.node .nh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.node .nh b{font-family:var(--fmono);font-size:11px;color:var(--signal-text);letter-spacing:.06em}
+.node h3{font-size:16px;letter-spacing:-.01em;font-weight:700}
+.node p{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* spec rows (tech) */
+.specs{border:1px solid rgba(255,255,255,.12);border-radius:14px;overflow:hidden}
+.specrow{display:grid;grid-template-columns:200px 1fr;gap:18px;padding:18px 22px;border-top:1px solid rgba(255,255,255,.1)}
+.specrow:first-child{border-top:0}
+.specrow .k{font-family:var(--fmono);font-size:12px;letter-spacing:.06em;color:rgba(243,239,230,.62);text-transform:uppercase}
+.specrow .v{font-size:14.5px;color:rgba(243,239,230,.9)}
+.specrow .v b{color:var(--paper)}
+
+/* ---------- TAM formula ---------- */
+.tam-anchor{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.tam-anchor .a{border:1px solid var(--hair);border-radius:12px;padding:14px 18px;background:var(--card)}
+.tam-anchor .a b{font-family:var(--fdisp);font-size:clamp(22px,2.4vw,30px);font-weight:800;display:block;line-height:1}
+.tam-anchor .a span{font-family:var(--fmono);font-size:11px;color:var(--muted);display:block;margin-top:9px;letter-spacing:.03em}
+.ladder{display:flex;flex-direction:column;gap:12px}
+.tier{border:1px solid var(--hair);border-radius:16px;background:var(--card);overflow:hidden}
+.tier.som{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal) inset}
+.tier .th{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:14px 22px;border-bottom:1px dashed var(--hair);flex-wrap:wrap}
+.tier .th .lab{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0}
+.tier .th .lab .tt{font-family:var(--fdisp);font-weight:800;font-size:20px;letter-spacing:-.01em}
+.tier .th .lab .d{font-size:13px;color:var(--muted)}
+.tier .th .val{font-family:var(--fdisp);font-weight:800;font-size:clamp(20px,2.6vw,30px);letter-spacing:-.02em;color:var(--ink);overflow-wrap:anywhere}
+.tier.som .th .val{color:var(--signal)}
+.formula{padding:15px 22px;display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
+.term{flex:1 1 200px;min-width:0;border:1px solid var(--hair);border-radius:12px;padding:14px 16px;background:var(--paper);position:relative}
+.term .paren{position:absolute;font-family:var(--fdisp);font-weight:800;color:var(--signal);opacity:.85}
+.term .pl{left:6px;top:50%;transform:translateY(-50%);font-size:30px}
+.term .pr{right:6px;top:50%;transform:translateY(-50%);font-size:30px}
+.term .in{padding:0 16px}
+.term .tlab{font-family:var(--fmono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--signal-text);font-weight:600}
+.term .texp{font-size:14px;color:var(--ink);margin-top:7px;font-weight:500;line-height:1.4}
+.term .tnote{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.45}
+.plus{align-self:center;font-family:var(--fdisp);font-weight:800;font-size:26px;color:var(--signal);padding:0 2px;flex:0 0 auto}
+.assume{display:inline-flex;align-items:flex-start;gap:7px;margin-top:14px;font-family:var(--fmono);font-size:11px;letter-spacing:.04em;color:var(--muted);border:1px dashed var(--hair);border-radius:14px;padding:8px 13px;max-width:100%}
+.assume i{width:6px;height:6px;border-radius:50%;background:var(--signal);display:inline-block}
+.revlevers{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.lever{border:1px solid var(--hair);border-radius:12px;padding:16px 18px;background:var(--card)}
+.lever.key{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal) inset}
+.lever.key b{color:var(--signal-text)}
+.partners{margin-top:clamp(20px,3vh,30px);display:flex;flex-direction:column;gap:12px}
+.partners .plabel{font-family:var(--fmono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(243,239,230,.5)}
+.partners .pslots{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.partners .pslots span{height:52px;border:1px dashed rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.03)}
+@media(max-width:680px){.partners .pslots{grid-template-columns:repeat(2,1fr)}}
+.lever b{font-size:15px;letter-spacing:-.01em}
+.lever span{display:block;font-size:12.5px;color:var(--muted);margin-top:6px}
+.eqbar{margin-top:12px;border:1px solid var(--ink);border-radius:12px;background:var(--ink-panel);color:var(--paper);padding:14px 20px;font-family:var(--fmono);font-size:clamp(12px,1.4vw,15px);letter-spacing:.02em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.eqbar .x{color:var(--signal);font-weight:600}
+
+/* ---------- win list ---------- */
+.winlist{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border:1px solid var(--hair);border-radius:16px;overflow:hidden;background:var(--card)}
+.win{padding:clamp(22px,2.6vw,30px);border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);position:relative}
+.win:nth-child(2n){border-right:0}
+.win:nth-last-child(-n+2){border-bottom:0}
+.win .no{font-family:var(--fdisp);font-size:13px;font-weight:800;color:var(--signal-text);letter-spacing:.05em}
+.win h3{font-size:clamp(17px,1.7vw,20px);margin:10px 0 8px;letter-spacing:-.02em}
+.win p{font-size:14px;color:var(--ink-2)}
+
+/* ---------- roadmap (direction shift) ---------- */
+.shiftbar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:34px;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:18px 22px;background:var(--ink-panel-2)}
+.shiftbar .from,.shiftbar .to{display:flex;flex-direction:column;gap:4px}
+.shiftbar .lbl{font-family:var(--fmono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,239,230,.5)}
+.shiftbar .big{font-family:var(--fdisp);font-weight:800;font-size:clamp(16px,2vw,22px);color:var(--paper)}
+.shiftbar .from .big{color:rgba(243,239,230,.6)}
+.shiftbar .ar{font-family:var(--fdisp);font-weight:800;font-size:26px;color:var(--signal)}
+.steps{position:relative;display:flex;flex-direction:column;gap:0}
+.step{display:grid;grid-template-columns:64px 1fr;gap:clamp(16px,2vw,30px);padding:24px 0;border-top:1px solid rgba(255,255,255,.1)}
+.step:first-child{border-top:0}
+.step .sn{font-family:var(--fdisp);font-weight:800;font-size:clamp(22px,3vw,34px);color:var(--signal);line-height:1}
+.step .sc h3{font-size:clamp(17px,1.9vw,22px);color:var(--paper);letter-spacing:-.02em;margin-bottom:8px}
+.step .sc p{font-size:14px;color:rgba(243,239,230,.72);max-width:70ch}
+.step .sc .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.step .sc .tags span{font-family:var(--fmono);font-size:11px;letter-spacing:.03em;color:rgba(243,239,230,.85);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:5px 11px}
+
+/* ---------- support / asks ---------- */
+.asks{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ask{border:1px solid var(--hair);border-radius:14px;background:var(--card);padding:22px;display:flex;flex-direction:column;gap:10px}
+.ask .role{font-family:var(--fmono);font-size:11px;letter-spacing:.06em;color:var(--signal-text);text-transform:uppercase;font-weight:600}
+.ask h3{font-size:17px;letter-spacing:-.01em;font-weight:700}
+.ask p{font-size:13.5px;color:var(--ink-2)}
+.fund{display:flex;gap:0;border:1px solid var(--hair);border-radius:14px;overflow:hidden;margin-top:28px;background:var(--card);flex-wrap:wrap}
+.fund .f{flex:1 1 150px;padding:18px 20px;border-right:1px solid var(--hair);position:relative}
+.fund .f:last-child{border-right:0}
+.fund .f .stage{font-family:var(--fmono);font-size:11px;letter-spacing:.05em;color:var(--muted)}
+.fund .f b{display:block;font-family:var(--fdisp);font-size:clamp(18px,2vw,24px);font-weight:800;margin-top:8px;letter-spacing:-.02em}
+.fund .f span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+
+/* ---------- team ---------- */
+.teamgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.member{border:1px solid var(--hair);border-radius:14px;background:var(--card);padding:20px 18px;display:flex;flex-direction:column;gap:8px;min-height:100%}
+.member .av{font-family:var(--fdisp);font-weight:800;font-size:20px;letter-spacing:.04em;width:46px;height:46px;border-radius:10px;background:var(--ink);color:var(--paper);display:grid;place-items:center}
+.member .nm{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.member .ro{font-family:var(--fmono);font-size:11px;color:var(--signal-text);letter-spacing:.03em;line-height:1.4}
+.member .cr{font-size:12.5px;color:var(--muted);line-height:1.55}
+.member.lead{border-color:var(--signal)}
+
+/* ---------- footer ---------- */
+.footer{background:var(--ink-panel);color:var(--paper);padding:clamp(48px,7vw,84px) 0 48px;border-top:1px solid rgba(255,255,255,.1)}
+.footcta{display:grid;grid-template-columns:1.3fr .7fr;gap:30px;align-items:end;margin-bottom:48px}
+.footcta h2{font-family:var(--fkr);font-size:clamp(26px,4vw,46px);font-weight:800;letter-spacing:-.03em;color:var(--paper);line-height:1.08}
+html[data-lang="en"] .footcta h2{font-family:var(--fdisp)}
+.footcta .em{color:var(--signal)}
+.footrow{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-end;border-top:1px solid rgba(255,255,255,.12);padding-top:28px}
+.footrow .fl{display:flex;align-items:center;gap:14px}
+.footrow .fl img{height:30px;opacity:.95}
+.footrow .meta{font-family:var(--fmono);font-size:11.5px;color:rgba(243,239,230,.5);letter-spacing:.03em;line-height:1.8;text-align:right}
+.footrow .meta a{color:var(--signal)}
+.note{font-family:var(--fmono);font-size:11px;color:rgba(243,239,230,.38);margin-top:26px;letter-spacing:.02em;line-height:1.7;max-width:80ch}
+
+/* ---------- reveal ---------- */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.laser,.scanstrip .laser{animation:none}.chip .dot,.hud .live i{animation:none}}
+
+/* ---------- slide deck (horizontal) ---------- */
+.deck{display:flex;flex-flow:row nowrap;height:100dvh;width:100vw;
+  overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;
+  scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain}
+.deck::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100vw;width:100vw;height:100dvh;overflow-y:auto;overflow-x:hidden;
+  scroll-snap-align:start;scroll-snap-stop:always;-webkit-overflow-scrolling:touch;position:relative;border-top:0}
+.slide::-webkit-scrollbar{width:9px}
+.slide::-webkit-scrollbar-thumb{background:var(--hair);border-radius:9px}
+.dark.slide::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18)}
+.slide > .wrap{min-height:100%;display:flex;flex-direction:column;justify-content:center;
+  padding-top:clamp(72px,8.5vh,92px);padding-bottom:clamp(56px,7vh,74px)}
+.slide.band{padding:0}
+.hero.slide{padding:0}
+.footer.slide{padding:0;min-height:100dvh;display:block}
+.footer.slide > .wrap{justify-content:flex-end}
+/* nav as fixed overlay above the deck */
+.nav{position:fixed;left:0;right:0;top:0}
+/* slide index dot on each slide corner */
+.slidetag{position:absolute;top:clamp(74px,11vh,104px);right:clamp(16px,4vw,34px);z-index:4;
+  font-family:var(--fmono);font-size:11px;letter-spacing:.14em;color:var(--muted)}
+.dark .slidetag{color:rgba(243,239,230,.5)}
+/* top progress bar under nav */
+.deckprog{position:fixed;left:0;top:63px;height:2px;width:0;background:var(--signal);z-index:58;transition:width .35s cubic-bezier(.4,0,.2,1)}
+/* bottom navigation control */
+.deckctrl{position:fixed;left:50%;bottom:clamp(8px,1.6vh,13px);transform:translateX(-50%);z-index:58;
+  display:flex;align-items:center;gap:2px;background:color-mix(in srgb,var(--paper) 88%,transparent);
+  backdrop-filter:blur(14px) saturate(1.2);border:1px solid var(--hair);border-radius:999px;padding:4px;
+  box-shadow:0 10px 26px -16px rgba(19,19,15,.5)}
+.deckctrl .navb{width:32px;height:32px;flex:0 0 auto;border-radius:999px;border:1px solid var(--hair);
+  background:var(--card);color:var(--ink);cursor:pointer;display:grid;place-items:center;transition:.2s}
+.deckctrl .navb:hover:not(:disabled){background:var(--ink);color:var(--paper)}
+.deckctrl .navb:disabled{opacity:.3;cursor:default}
+.deckctrl .navb svg{width:14px;height:14px}
+.deckctrl .ctrmid{min-width:84px;max-width:38vw;text-align:center;padding:0 7px}
+.deckctrl .ctrmid b{display:block;font-family:var(--fmono);font-size:11px;font-weight:600;letter-spacing:.04em;white-space:nowrap;line-height:1.1}
+.deckctrl .ctrmid b i{color:var(--signal-text);font-style:normal}
+.deckctrl .ctrmid > span{display:block;font-size:8.5px;color:var(--muted);margin-top:1px;letter-spacing:.05em;
+  text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deckhint{position:fixed;right:clamp(14px,4vw,26px);bottom:clamp(12px,2vh,18px);z-index:57;
+  font-family:var(--fmono);font-size:9.5px;letter-spacing:.1em;color:var(--muted);opacity:.6;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.deck{scroll-behavior:auto}.deckprog{transition:none}}
+@media (max-width:680px){.deckhint{display:none}.deckctrl .ctrmid span{display:none}.deckctrl .ctrmid{min-width:70px}}
+
+/* ---------- "wait" / conviction slide ---------- */
+.wedge{position:relative} /* note: do NOT set overflow:hidden here — it would block the slide's vertical scroll on mobile */
+.wedge .wbg{position:absolute;inset:0;z-index:0;overflow:hidden}
+.wedge .wbg::before{content:"";position:absolute;inset:0;background:url('assets/tessera_design_sketch.png') center/cover no-repeat;filter:invert(1) grayscale(1) contrast(1.05);opacity:.15}
+.wedge .wbg::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 72% 30%,rgba(255,61,0,.07),transparent 55%),linear-gradient(180deg,rgba(16,15,10,.5),rgba(16,15,10,.82))}
+.wedge > .wrap{position:relative;z-index:1}
+.wgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+.wcard{border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(18,17,11,.5);backdrop-filter:blur(5px);padding:clamp(18px,2.2vw,24px)}
+.wcard .wn{font-family:var(--fdisp);font-weight:800;font-size:13px;color:#ff7a4d;letter-spacing:.05em}
+.wcard h3{color:var(--paper);font-size:clamp(17px,1.9vw,22px);margin:11px 0 9px;letter-spacing:-.02em;line-height:1.15}
+.wcard p{color:rgba(243,239,230,.76);font-size:14.5px}
+.wcard .cost{display:inline-block;margin-top:12px;font-family:var(--fmono);font-size:11px;color:#ff7a4d;border:1px dashed rgba(255,122,77,.55);border-radius:999px;padding:5px 11px;letter-spacing:.03em}
+.wbig{margin-top:clamp(24px,3.5vh,38px);font-family:var(--fkr);font-weight:800;font-size:clamp(24px,3.6vw,44px);letter-spacing:-.03em;color:var(--paper);line-height:1.14}
+html[data-lang="en"] .wbig{font-family:var(--fdisp)}
+.wbig .hl{color:var(--signal)}
+@media (max-width:880px){.wgrid{grid-template-columns:1fr}}
+.failhead{margin-top:clamp(18px,2.5vh,26px);font-family:var(--fmono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,239,230,.5)}
+.fails{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:clamp(16px,2.4vh,24px)}
+.fail{border:1px solid rgba(255,255,255,.14);border-radius:12px;overflow:hidden;background:rgba(18,17,11,.5)}
+.fail .ph{height:clamp(170px,24vh,230px);display:grid;place-items:center;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.12);background:#0c0c08}
+.fail .ph img{width:100%;height:100%;object-fit:cover;object-position:center 40%}
+.fail .ft{padding:12px 14px}
+.fail .ft b{color:var(--paper);font-size:14px;display:block;letter-spacing:-.01em}
+.fail .ft span{display:block;margin-top:6px;font-size:12.5px;color:rgba(243,239,230,.66);line-height:1.45}
+.fail .ft span::before{content:"✕ ";color:#ff7a4d;font-weight:700}
+@media (max-width:880px){.fails{grid-template-columns:1fr}}
+/* bigger, fewer-words problem cards */
+.probgrid .card{padding:clamp(22px,2.6vw,32px)}
+.probgrid .card h3{font-size:clamp(21px,2.3vw,28px);margin:12px 0 10px}
+.probgrid .card p{font-size:15.5px;color:var(--ink-2)}
+/* image-first annotated explainer (how/security) */
+.annorow{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(22px,4vw,52px);align-items:center}
+.annoimg{position:relative;border:1.5px solid rgba(255,255,255,.22);border-radius:10px;overflow:hidden;background:#0c0c08}
+.annoimg img{width:100%;display:block;filter:grayscale(.1) contrast(1.05) brightness(.98)}
+.anodot{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--signal);color:#fff;font-family:var(--fdisp);font-weight:800;font-size:14px;display:grid;place-items:center;box-shadow:0 4px 16px rgba(255,61,0,.55);transform:translate(-50%,-50%);border:2px solid #fff;z-index:2}
+.annolist{display:flex;flex-direction:column;gap:clamp(12px,2vh,18px)}
+.annopoint{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start}
+.annopoint .an{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--signal);color:#ff7a4d;font-family:var(--fdisp);font-weight:800;font-size:14px;display:grid;place-items:center;flex:0 0 auto}
+.annopoint h4{color:var(--paper);font-size:clamp(16px,1.8vw,20px);letter-spacing:-.01em}
+.annopoint p{color:rgba(243,239,230,.74);font-size:14px;margin-top:5px}
+.annopoint p b{color:var(--paper)}
+@media (max-width:880px){.annorow{grid-template-columns:1fr}}
+
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .g4,.tam-anchor,.revlevers{grid-template-columns:repeat(2,1fr)}
+  .teamgrid{grid-template-columns:repeat(3,1fr)}
+  .asks{grid-template-columns:repeat(2,1fr)}
+}
+@media (min-width:881px){ .mobilemenu{display:none!important} }
+@media (max-width:880px){
+  .navlinks{display:none}
+  .menubtn{display:flex;width:44px;height:44px}
+  .lang button{padding:9px 13px}
+  .herohead{grid-template-columns:1fr;align-items:start;gap:22px}
+  .split{grid-template-columns:1fr}
+  .three,.g3{grid-template-columns:1fr}
+  .specrow{grid-template-columns:1fr;gap:6px}
+  .winlist{grid-template-columns:1fr}
+  .win{border-right:0}
+  .win:nth-last-child(-n+2){border-bottom:1px solid var(--hair)}
+  .win:last-child{border-bottom:0}
+  .footcta{grid-template-columns:1fr;gap:20px}
+}
+@media (max-width:620px){
+  .navin{gap:10px}
+  .g2,.g4,.tam-anchor,.revlevers{grid-template-columns:1fr}
+  .teamgrid,.asks{grid-template-columns:1fr}
+  .hud .tag,.hud .tagr{font-size:9px;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .statline .st{flex:1 1 100%;border-right:0;border-bottom:1px solid var(--hair)}
+  .statline .st:last-child{border-bottom:0}
+  .formula{flex-direction:column}
+  .plus{transform:rotate(90deg)}
+  .term{flex:1 1 auto}
+  .tier .th{flex-direction:column;align-items:flex-start;gap:7px}
+  .tier .th .val{font-size:22px}
+  .shead .sp{display:none}
+  .hud .live{left:42px}.hud .corner{width:16px;height:16px}
+  .fund .f{flex:1 1 100%;border-right:0;border-bottom:1px solid var(--hair)}
+  .fund .f:last-child{border-bottom:0}
+}
+@media (max-width:380px){ .brand span{display:none} }
+</style>
+</head>
+<body>
+<a href="#top" class="skip" data-en="Skip to content">본문으로 건너뛰기</a>
+
+<!-- ===================== NAV ===================== -->
+<nav class="nav">
+  <div class="wrap navin">
+    <a href="#top" class="brand"><img class="bm" src="assets/tessera_mark.png" alt="" /><span>TESSERA</span></a>
+    <div class="navlinks">
+      <a href="#what" data-en="What it is">정체성</a>
+      <a href="#why" data-en="Wait…">잠깐</a>
+      <a href="#problem" data-en="Problem">문제</a>
+      <a href="#how" data-en="How &amp; Security">기술·보안</a>
+      <a href="#market" data-en="Market · TAM">시장·TAM</a>
+      <a href="#win" data-en="Strategy">전략</a>
+      <a href="#support" data-en="Support">지원</a>
+      <a href="#team" data-en="Team">팀</a>
+    </div>
+    <div class="navright">
+      <div class="lang" role="group" aria-label="Language / 언어">
+        <button id="koBtn" class="on" type="button" aria-pressed="true">KR</button>
+        <button id="enBtn" type="button" aria-pressed="false">EN</button>
+      </div>
+      <button class="menubtn" id="menuBtn" type="button" aria-label="메뉴 / Menu" aria-expanded="false" aria-controls="mobileMenu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+  <div class="mobilemenu" id="mobileMenu">
+    <a href="#what" data-en="What it is">정체성 — TESSERA란</a>
+    <a href="#why" data-en="Wait — seen this before?">잠깐 — 어디서 봤죠?</a>
+    <a href="#problem" data-en="Problem">우리가 푸는 문제</a>
+    <a href="#how" data-en="How it works &amp; Security">작동 원리 · 보안</a>
+    <a href="#market" data-en="Market · TAM">시장 · TAM</a>
+    <a href="#win" data-en="We came to change it">우리는 진짜 바꾸러</a>
+    <a href="#support" data-en="Support">멘토십 · 지원</a>
+    <a href="#team" data-en="Team">팀</a>
+  </div>
+</nav>
+
+<main id="top">
+<div class="deck" id="deck">
+
+<!-- ===================== HERO ===================== -->
+<header class="hero slide" id="hero" data-title="Tessera" data-en-title="Tessera">
+ <div class="wrap">
+  <div class="hero-top reveal">
+    <span class="chip"><span class="dot"></span><span class="mono" data-en="NFC OFFLINE IDENTITY &amp; EMERGENCY-DATA PLATFORM">NFC 오프라인 신원·응급정보 플랫폼</span></span>
+    <span class="kicker" data-en="ROK MND STARTUP COMPETITION 2026 · HEALTHCARE · INDUSTRIAL SAFETY · DEFENSE">대한민국 국방부 창업경진대회 2026 · 의료 · 산업안전 · 국방</span>
+  </div>
+
+  <div class="herohero">
+    <div class="hleft reveal" style="transition-delay:.1s">
+      <h1 data-en="When networks fail and people <span class='em'>cannot speak</span> — Tessera reads identity, and saves the seconds that decide a life.">
+        통신이 끊기고, 사람이 <span class="em">말하지 못하는 순간</span>에도<br/>신원과 생명을 읽어내는 인프라.
+      </h1>
+      <p data-en="A single scan replaces slow, error-prone visual checks. Tessera goes live across three fronts at once — hospitals, high-risk worksites, and the army.">
+        느리고 오류 많은 육안 확인을, 스캔 한 번으로 대체합니다. 병원, 산업현장, 그리고 군 — 세 곳에서 <span class="em">동시에</span> 시작합니다.
+      </p>
+      <div class="cta">
+        <a class="btn primary" href="#win"><span data-en="Why we win">우리가 이기는 법</span> <span class="arr">→</span></a>
+        <a class="btn" href="#support"><span data-en="How to help">지원이 필요한 지점</span></a>
+      </div>
+    </div>
+    <figure class="hfig reveal" style="transition-delay:.16s;margin:0">
+      <span class="corner c1"></span><span class="corner c2"></span>
+      <img src="assets/tessera_prototype.jpg" alt="Tessera working prototype — a metal NFC dog-tag being scanned, the soldier's record shown on the handheld scanner" />
+      <figcaption data-en="Tessera tag + scanner — working prototype">Tessera 인식표 + 스캐너 — 실물 프로토타입</figcaption>
+    </figure>
+  </div>
+
+  <div class="statline reveal" style="transition-delay:.2s">
+    <div class="st"><b data-en="₩700B">₩7,000억</b><span data-en="Domestic SOM — hospitals + industrial (₩600–700B)">국내 SOM — 병원+산업 (6,000~7,000억)</span></div>
+    <div class="st"><b data-en="₩15T">₩15조</b><span data-en="Target TAM — patients × hospital revenue (+industrial)">목표 TAM — 환자수×병원매출 (+산업재해)</span></div>
+    <div class="st"><b style="font-size:clamp(15px,1.7vw,19px);line-height:1.18" data-en="Honorable Mention (7th)">장려상(7등) 수상</b><span data-en="ROK Army startup competition · awarded among 650 teams">육군 창업경진대회 650팀 중 수상</span></div>
+    <div class="st"><b style="font-size:clamp(14px,1.6vw,18px);line-height:1.18" data-en="Military-grade cybersecurity">군용 등급 사이버보안</b><span data-en="OMOP CDM de-identification · AES-256 · Zero-Trust">OMOP CDM 비식별 · AES-256 · Zero-Trust</span></div>
+  </div>
+  <p class="small reveal" style="margin-top:12px" data-en="Market figures are working estimates, to be finalized with source data (hospital count · patient throughput · price sheet).">시장 수치는 근거자료(병원 수 · 환자 처리량 · 단가표)로 확정할 추정값입니다.</p>
+ </div>
+</header>
+
+<!-- ===================== DEMO VIDEO (own slide) ===================== -->
+<section class="band dark slide vidslide" id="video" data-title="데모 영상" data-en-title="Demo">
+  <div class="wrap">
+    <div class="vidwrap reveal">
+      <div class="vidcap">
+        <span class="l"><i></i><span data-en="FIELD DEMO">필드 데모</span></span>
+        <span data-en="TESSERA // SCAN-TO-IDENTITY">TESSERA // 스캔 한 번으로 신원·응급정보</span>
+      </div>
+      <div class="monitor" style="margin:0">
+        <div class="vid" id="vidHolder"
+             data-embed="https://www.youtube.com/embed/3_H07vFSLuQ?autoplay=1&mute=1&playsinline=1&loop=1&playlist=3_H07vFSLuQ&rel=0&modestbranding=1&controls=1&color=white"
+             data-watch="https://www.youtube.com/watch?v=3_H07vFSLuQ">
+          <button class="poster" id="videoPoster" type="button" aria-label="Play Tessera demo video">
+            <img class="posterimg" src="https://i.ytimg.com/vi/3_H07vFSLuQ/hqdefault.jpg" alt="" aria-hidden="true"
+                 onerror="this.onerror=null;this.src='assets/tessera_scanner_device.png'" />
+            <span class="playbtn"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></span>
+            <span class="ptxt" data-en="Play the Tessera demo">Tessera 데모 영상 재생</span>
+          </button>
+          <div class="hud" aria-hidden="true">
+            <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
+            <span class="live"><i></i>DEMO · FIELD SCAN</span>
+            <span class="tag" data-en="TESSERA // SCAN-TO-IDENTITY">TESSERA // 스캔 한 번으로 신원·응급정보</span>
+            <span class="tagr">NFC · OFFLINE · AIR-GAPPED</span>
+          </div>
+        </div>
+        <div class="scanstrip"><div class="bc"></div><div class="laser"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 01 WHAT IT IS ===================== -->
+<section class="band slide" id="what" data-title="정체성" data-en-title="What it is">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 02 ]</span>
+      <h2 data-en="What Tessera is">TESSERA란 무엇인가</h2>
+      <span class="sp" data-en="Identity token, reborn">신원의 증표, 다시 태어나다</span>
+    </div>
+
+    <div class="split">
+      <div class="reveal">
+        <p class="lead" style="font-size:clamp(18px,1.7vw,23px)" data-en="In ancient Rome, a <i>tessera</i> was a soldier's token of identity — and the watchword that told friend from foe. We're rebuilding that token.">
+          고대 로마에서 <i>테세라</i>는 병사의 신원 증표이자, 아군과 적군을 가르는 암구호였습니다. 그 증표를, 지금 다시 만듭니다.
+        </p>
+        <p style="margin-top:18px;font-size:16px;color:var(--ink-2)" data-en="An NFC platform that works <b>even with no network</b> — a battery-free tag, a charged handheld scanner, and secure software. One scan becomes verified identity and life-critical data.">
+          <b>통신이 끊겨도</b> 작동하는 NFC 플랫폼입니다. 무전원 태그 · 충전식 스캐너 · 보안 소프트웨어 — 스캔 한 번이 검증된 신원과 생명 직결 정보가 됩니다.
+        </p>
+
+        <div class="three">
+          <div class="node"><div class="nh"><b>A</b></div><h3 data-en="The Tag">태그</h3><p data-en="Battery-free NFC sealed in waterproof HDPE.">무전원 NFC를 방수 HDPE에 봉인.</p></div>
+          <div class="node"><div class="nh"><b>B</b></div><h3 data-en="The Scanner">스캐너</h3><p data-en="Rugged, charged reader with air-gapped local data.">충전식 견고한 리더기 · 에어갭 로컬 DB.</p></div>
+          <div class="node"><div class="nh"><b>C</b></div><h3 data-en="The Software">소프트웨어</h3><p data-en="Secure, de-identified database + console.">보안·비식별 DB + 콘솔.</p></div>
+        </div>
+
+        <p class="small" style="margin-top:20px;font-size:14.5px" data-en="<b>One product, three fronts at once</b> — hospitals, high-risk worksites, and the army.">
+          <b style="color:var(--ink)">하나의 제품, 세 곳에서 동시에</b> — 병원 · 산업현장 · 군.
+        </p>
+      </div>
+
+      <figure class="figframe reveal" style="transition-delay:.1s;margin:0">
+        <span class="corner c1"></span><span class="corner c2"></span>
+        <img src="assets/tessera_scanner_device.png" alt="Tessera handheld scanner reading an encrypted ID tag" />
+        <figcaption data-en="Tessera scanner — instant ID, blood type, allergies, emergency record">Tessera 스캐너 — 신원·혈액형·알러지·응급기록 즉시 표시</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== WAIT / CONVICTION ===================== -->
+<section class="band dark slide wedge" id="why" data-title="잠깐" data-en-title="Wait…" style="background:var(--ink-panel)">
+  <div class="wbg"></div>
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 03 ]</span>
+      <h2 data-en="Wait — haven't you seen this before?">잠깐. 어디서 보신 것 같죠?</h2>
+      <span class="sp" data-en="The idea exists. Nobody made it universal.">아이디어는 있었습니다. 아무도 보편화하지 못했을 뿐.</span>
+    </div>
+    <div class="wgrid">
+      <div class="wcard reveal"><span class="wn">01</span><h3 data-en="This idea isn't new">이 아이디어, 새롭지 않습니다</h3><p data-en="NFC medical devices already exist in the world.">NFC 의료 디바이스는 이미 세상에 존재합니다.</p></div>
+      <div class="wcard reveal" style="transition-delay:.07s"><span class="wn">02</span><h3 data-en="Yet society stayed the same">그런데 사회는 그대로입니다</h3><p data-en="Hospitals, worksites, the ROK Army, the US Army — no one ever made it universal.">병원도, 산업현장도, 대한민국 육군도, 미군도 — 아무도 보편화시키지 못했습니다.</p></div>
+      <div class="wcard reveal" style="transition-delay:.14s"><span class="wn">03</span><h3 data-en="Existing medical NFC? Too expensive">기존 의료용 NFC? 너무 비쌉니다</h3><p data-en="And when it was cheap, it wasn't built right. At a fair price, with dependable quality — Tessera makes it.">가격이 싼 경우엔 제대로 만들어지지 못했습니다. <b style="color:var(--paper)">합리적인 가격에, 의지할 만한 퀄리티로 — 테세라가 만듭니다.</b></p></div>
+    </div>
+
+    <div class="fails">
+      <div class="fail reveal"><div class="ph"><img src="assets/2sicknfc.jpg" alt="Implantable / wearable NFC chip module" loading="lazy" /></div><div class="ft"><b data-en="Implantable NFC chip">이식형 NFC 칩</b><span data-en="Invasive &amp; premium-priced — impossible to issue at scale.">침습적·고가 — 대량 보급 불가.</span></div></div>
+      <div class="fail reveal" style="transition-delay:.07s"><div class="ph"><img src="assets/byeong1rfid.jpeg" alt="Hospital RFID patient wristbands" loading="lazy" /></div><div class="ft"><b data-en="Hospital RFID wristband">병원 RFID 손목밴드</b><span data-en="Single-use &amp; network-dependent — fails offline and in the field.">일회용·통신 의존 — 현장·오프라인에 부적합.</span></div></div>
+      <div class="fail reveal" style="transition-delay:.14s"><div class="ph"><img src="assets/othernfcdogtag.jpeg" alt="Existing NFC dog-tag prototype" loading="lazy" style="object-position:center" /></div><div class="ft"><b data-en="Smart dog-tag prototypes">스마트 군번줄 시제품</b><span data-en="No standardization, no security — never adopted.">표준화 실패 및 보안 부재 — 채택되지 못함.</span></div></div>
+    </div>
+
+    <p class="wbig reveal" style="margin-top:clamp(18px,2.5vh,28px)" data-en="It has to be done right.<br>So <span class='hl'>we're the ones doing it.</span>">누군가는 제대로 해야 할 일입니다.<br/><span class="hl">그래서, 우리가 합니다.</span></p>
+  </div>
+</section>
+
+<!-- ===================== 02 PROBLEM ===================== -->
+<section class="band slide" id="problem" data-title="문제" data-en-title="Problem" style="background:var(--paper-2)">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 04 ]</span>
+      <h2 data-en="The problem we solve">우리가 푸는 문제</h2>
+      <span class="sp" data-en="Seconds change the outcome">몇 초가 결과를 바꾼다</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:28px;font-size:clamp(17px,1.6vw,21px)" data-en="Identity is still confirmed by eye — slow, forgeable, and impossible when a person can't speak.">
+      신원은 아직도 ‘눈’으로 확인합니다 — 느리고, 위조 가능하고, 사람이 말 못 하면 아예 불가능합니다.
+    </p>
+
+    <div class="grid g2 probgrid">
+      <div class="card tick reveal"><span class="pill o" data-en="Defense origin">검증된 원천 문제</span><h3 data-en="We saw it firsthand">한미연합훈련에서 직접 목격</h3><p data-en="Paper TCCC cards slowed casualty care; comms blackout broke identity checks. The real bottleneck, witnessed in the field.">종이 TCCC 카드 대조로 처치가 지연되고, 통신 단절이 신원확인을 무너뜨렸습니다.</p></div>
+      <div class="card tick reveal" style="transition-delay:.06s"><span class="pill s" data-en="Hospital">병원</span><h3 data-en="Check-in, by scan not by eye">체크인을 스캔으로</h3><p data-en="ID and patient data verified by encrypted scan — more accurate, far faster, anti-forgery.">신분증·환자 정보를 암호화 스캔으로 — 더 정확하고, 더 빠르게.</p></div>
+      <div class="card tick reveal" style="transition-delay:.12s"><span class="pill s" data-en="Emergency">응급</span><h3 data-en="The golden hour">골든타임</h3><p data-en="Blood type, allergies, history — instantly, even for patients who can't speak.">말 못 하는 환자도 혈액형·알러지·병력을 즉시.</p></div>
+      <div class="card tick reveal" style="transition-delay:.18s"><span class="pill o" data-en="Worksite">산업현장</span><h3 data-en="At the accident, instantly">사고 현장, 즉시</h3><p data-en="Worker identity, hazard data, emergency contacts — mandated since the 2022 Serious Accidents Act.">작업자 신원·위험정보·응급연락처 즉시. 중대재해처벌법으로 의무화.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 03 HOW + SECURITY ===================== -->
+<section class="band dark slide" id="how" data-title="기술·보안" data-en-title="How &amp; Security">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 05 ]</span>
+      <h2 data-en="How it works — and why it's secure">작동 원리, 그리고 보안</h2>
+      <span class="sp" data-en="Security first, by design">보안 우선 설계</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:clamp(20px,3vh,30px);font-size:clamp(16px,1.5vw,20px)" data-en="One scan, on a charged handheld — no network needed. The security is what makes it deployable in hospitals.">
+      충전된 단말기에서 스캔 한 번 — 통신은 필요 없습니다. 병원에 실제로 배치되게 만드는 것은 보안입니다.
+    </p>
+
+    <div class="annorow">
+      <figure class="annoimg reveal" style="margin:0">
+        <img src="assets/tessera_scanner_device.png" alt="Tessera scanner showing an ID record — blood type, allergies, barcode — while reading an NFC tag" />
+        <span class="anodot" style="left:73%;top:64%">1</span>
+        <span class="anodot" style="left:28%;top:33%">2</span>
+        <span class="anodot" style="left:13%;top:78%">3</span>
+      </figure>
+      <div class="annolist reveal" style="transition-delay:.1s">
+        <div class="annopoint"><span class="an">1</span><div><h4 data-en="Battery-free tag">무전원 태그</h4><p data-en="The orange NFC tag needs no battery — sealed in waterproof HDPE.">배터리 없이 방수 HDPE에 봉인된 NFC 태그.</p></div></div>
+        <div class="annopoint"><span class="an">2</span><div><h4 data-en="Instant read">즉시 판독</h4><p data-en="Blood type, allergies, TCCC and emergency record on screen in milliseconds.">혈액형·알러지·TCCC·응급기록을 화면에 수 밀리초로.</p></div></div>
+        <div class="annopoint"><span class="an">3</span><div><h4 data-en="Air-gapped">에어갭 운용</h4><p data-en="The charged scanner cuts off the network and runs fully offline.">충전식 스캐너가 통신을 끊고 완전 오프라인으로 작동.</p></div></div>
+        <div class="annopoint"><span class="an">★</span><div><h4 data-en="Military-grade, no PII">군용 등급 보안 · 무 PII</h4><p data-en="<b>OMOP CDM</b> de-identification (no names), <b>AES-256</b> Zero-Trust, Tamper-Proof. AI runs only on de-identified data."><b>OMOP CDM</b> 비식별(이름 없음) · <b>AES-256</b> Zero-Trust · 탬퍼 프루프. AI는 비식별 데이터에서만 학습.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 04 MARKET / TAM ===================== -->
+<section class="band slide" id="market" data-title="시장·TAM" data-en-title="Market · TAM">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 06 ]</span>
+      <h2 data-en="Market &amp; TAM — three fronts, SOM first">시장 · TAM — 세 방향, SOM부터</h2>
+      <span class="sp" data-en="Each layer = sum of three (parentheses)">각 단계 = 세 방향의 (괄호) 합</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:clamp(20px,3vh,28px);font-size:clamp(16px,1.5vw,20px)" data-en="Three fronts at once — healthcare, industrial safety, and the army. Each layer (SOM · SAM · TAM) is the sum of the three in (parentheses). These figures will be updated as the plan firms up.">
+      세 방향에 동시에 — 의료 · 산업재해 · 군. 각 단계(SOM · SAM · TAM)를 세 방향의 (괄호) 합으로 계산합니다. <b style="color:var(--ink)">수치는 사업이 구체화되며 갱신됩니다.</b>
+    </p>
+
+    <div class="tam-anchor reveal">
+      <div class="a"><b data-en="180K">18만</b><span data-en="ROK enlistment / yr — army demand">연 국군 입대 — 군 수요</span></div>
+      <div class="a"><b>2022</b><span data-en="Serious Accidents Act — industrial demand">중대재해처벌법 — 산업 수요</span></div>
+      <div class="a"><b>$1B+</b><span data-en="Domestic NFC market · ~10%/yr">국내 NFC 시장 · 연 10%↑</span></div>
+      <div class="a"><b>$30B+</b><span data-en="Global NFC market — TAM ceiling">글로벌 NFC 시장 — TAM 천장</span></div>
+    </div>
+
+    <div class="ladder">
+
+      <!-- TAM -->
+      <div class="tier reveal">
+        <div class="th">
+          <div class="lab"><span class="tt">TAM</span><span class="d" data-en="Global — all three fronts">글로벌 — 세 방향 전체</span></div>
+          <div class="val" data-en="≈ ₩15T">≈ ₩15조</div>
+        </div>
+        <div class="formula">
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Healthcare">의료</div><div class="texp" data-en="global hospital patients">글로벌 병원 환자</div></div><span class="paren pr">)</span></div>
+          <span class="plus">+</span>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Industrial">산업재해</div><div class="texp" data-en="global high-risk-industry workforce">글로벌 고위험 산업 인원</div></div><span class="paren pr">)</span></div>
+          <span class="plus">+</span>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Defense">군</div><div class="texp" data-en="global defense NFC · $30B+ base">글로벌 국방 NFC · $30B+ 기반</div></div><span class="paren pr">)</span></div>
+        </div>
+      </div>
+
+      <!-- SAM -->
+      <div class="tier reveal">
+        <div class="th">
+          <div class="lab"><span class="tt">SAM</span><span class="d" data-en="Domestic reach — all three fronts">국내 도달 가능 — 세 방향 전체</span></div>
+          <div class="val" data-en="domestic full reach">국내 전체</div>
+        </div>
+        <div class="formula">
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Healthcare">의료</div><div class="texp" data-en="all hospitals · EMS · clinics">전국 병원 · 응급 · 의원</div></div><span class="paren pr">)</span></div>
+          <span class="plus">+</span>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Industrial">산업재해</div><div class="texp" data-en="construction · manufacturing · plant · fire">건설 · 제조 · 플랜트 · 소방</div></div><span class="paren pr">)</span></div>
+          <span class="plus">+</span>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Army">군</div><div class="texp" data-en="all units — tags · scanners · SW">전군 — 인식표 · 스캐너 · SW</div></div><span class="paren pr">)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MARKET 2: SOM + REVENUE ===================== -->
+<section class="band slide" id="market2" data-title="SOM · 매출" data-en-title="SOM · Revenue" style="background:var(--paper-2)">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 07 ]</span>
+      <h2 data-en="What we capture now — and how it recurs">즉시 시장, 그리고 반복 매출</h2>
+      <span class="sp" data-en="SOM + recurring revenue">SOM + 반복 매출</span>
+    </div>
+
+    <div class="ladder" style="margin-bottom:clamp(14px,2vh,22px)">
+      <!-- SOM -->
+      <div class="tier som reveal">
+        <div class="th">
+          <div class="lab"><span class="tt">SOM</span><span class="d" data-en="Beachheads now — three fronts in parallel">즉시 거점 — 세 방향 동시 진입</span></div>
+          <div class="val" data-en="≈ ₩0.6–0.7T">≈ ₩6,000–7,000억</div>
+        </div>
+        <div class="formula">
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Healthcare">의료</div><div class="texp" data-en="beachhead hospitals × patients × price">거점 병원 × 환자 × 단가</div></div><span class="paren pr">)</span></div>
+          <span class="plus">+</span>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Industrial">산업재해</div><div class="texp" data-en="pilot worksites × workers × price">거점 현장 × 인원 × 단가</div></div><span class="paren pr">)</span></div>
+          <span class="plus">+</span>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Army">군</div><div class="texp" data-en="initial unit rollout + software">초기 부대 보급 + SW</div></div><span class="paren pr">)</span></div>
+        </div>
+        <div style="padding:0 22px 18px"><span class="assume"><i></i><span data-en="Figures will be updated with source data (counts · throughput · unit price).">수치는 근거자료(수량·처리량·단가)로 갱신됩니다.</span></span></div>
+      </div>
+    </div>
+
+    <!-- revenue model: recurring -->
+    <div class="shead reveal" style="margin-bottom:8px">
+      <span class="sidx" data-en="REVENUE">매출</span>
+      <h3 class="sub-h" style="font-size:clamp(20px,2.6vw,30px)" data-en="How the money compounds">매출은 어떻게 쌓이는가</h3>
+    </div>
+    <p class="lead reveal" style="margin-bottom:6px;font-size:clamp(15px,1.4vw,18px)" data-en="Hardware sells once. The <b style='color:var(--ink)'>software and the AI model are licensed every year</b> — and they get better the more they're used.">
+      하드웨어는 한 번 팔립니다. <b style="color:var(--ink)">소프트웨어와 AI 모델은 매년 라이선스</b>로 — 그리고 쓸수록 좋아집니다.
+    </p>
+    <div class="revlevers reveal">
+      <div class="lever key"><b data-en="Software + AI licensing">소프트웨어 · AI 라이선스</b><span data-en="Annual license; the model improves with use — recurring.">매년 과금 · 모델은 쓸수록 향상 — 반복.</span></div>
+      <div class="lever"><b data-en="Hospital / org contracts">병원 · 기관 계약</b><span data-en="Recurring subscription per facility.">기관 단위 반복 구독.</span></div>
+      <div class="lever"><b data-en="Insurance billing">보험 적용</b><span data-en="Reimbursable per-use at the care touchpoint.">의료 접점에서 건당 수가 적용.</span></div>
+      <div class="lever"><b data-en="Server · data ops">서버 · 데이터 운용</b><span data-en="Secure hosting + integration of de-identified records.">비식별 기록의 보안 호스팅·연동.</span></div>
+    </div>
+    <div class="eqbar reveal">
+      <span class="x" data-en="RECURRING">반복 매출</span>
+      <span>=</span>
+      <span data-en="( hospitals × patients × price )">( 병원 × 환자 × 단가 )</span>
+      <span class="x">+</span>
+      <span data-en="( industrial workers × price )">( 산업재해 인원 × 단가 )</span>
+      <span class="x">+</span>
+      <span data-en="( SW · AI license × orgs )">( SW · AI 라이선스 × 기관 )</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 05 WE CAME TO CHANGE IT (win + roadmap merged) ===================== -->
+<section class="band dark slide" id="win" data-title="우리는 진짜" data-en-title="We came to change it">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 07 ]</span>
+      <h2 data-en="We came to actually change it.">우리는 진짜 바꾸러 나왔습니다.</h2>
+      <span class="sp" data-en="Not to win a pitch — to integrate, for real">발표가 아니라, 진짜로 통합하러</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:clamp(20px,3vh,28px);font-size:clamp(16px,1.5vw,20px)" data-en="Step by step, we make Tessera fit seamlessly into all three fronts — hospitals, worksites, and the army. Here's how, and who we're already talking to.">
+      한 걸음씩, Tessera를 세 방향 — 병원 · 산업현장 · 군 — 에 매끄럽게 녹여 넣습니다. 그 방법과, 지금 함께 이야기하고 있는 곳들입니다.
+    </p>
+
+    <div class="steps">
+      <div class="step reveal"><div class="sn">1</div><div class="sc"><h3 data-en="A working MVP in hand">손에 쥐는 작동 MVP</h3><p data-en="Tag, scanner and secure software hardened into a real product you can hold and scan — proven on video today.">태그·스캐너·보안 SW를 손에 쥐고 스캔하는 실제 제품으로 — 지금은 영상으로 증명.</p><div class="tags"><span data-en="Hardware">하드웨어</span><span data-en="Demo">데모</span></div></div></div>
+      <div class="step reveal"><div class="sn">2</div><div class="sc"><h3 data-en="Data &amp; cloud partnerships">데이터 · 클라우드 파트너십</h3><p data-en="OMOP CDM de-identification with AI on top. We're actively reaching out to data services and neo-clouds for GPU and infrastructure.">OMOP CDM 비식별 위에 AI를. 데이터 서비스·네오클라우드와 GPU·인프라 협력을 적극 추진 중입니다.</p><div class="tags"><span data-en="Neo-clouds">네오클라우드</span><span data-en="GPU · AI">GPU · AI</span></div></div></div>
+      <div class="step reveal"><div class="sn">3</div><div class="sc"><h3 data-en="Proven in real hospitals">실제 병원에서 검증</h3><p data-en="Check-in and ambulance use-cases piloted in real hospitals, measured before / after.">체크인·구급차 유스케이스를 실제 병원에서 시범 운영하고 Before/After로 검증합니다.</p><div class="tags"><span data-en="Hospital pilot">병원 파일럿</span><span data-en="KPI">KPI</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== WE CAME TO CHANGE IT — part 2 (scale + partners) ===================== -->
+<section class="band dark slide" id="win2" data-title="전개 · 파트너십" data-en-title="Scale · Partners">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 09 ]</span>
+      <h2 data-en="Scale across the three fronts — then partner up">세 방향으로 확장, 그리고 파트너십</h2>
+      <span class="sp" data-en="From beachhead to ecosystem">거점에서 생태계로</span>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="sn">4</div><div class="sc"><h3 data-en="Three fronts, in parallel">산업현장 · 군 동시 전개</h3><p data-en="The same system drops straight into construction sites and military units — one platform, three fronts.">같은 시스템을 건설 현장과 부대에 그대로 — 하나의 플랫폼, 세 방향 동시에.</p><div class="tags"><span data-en="Industrial">산업현장</span><span data-en="Army">군</span></div></div></div>
+      <div class="step reveal"><div class="sn">5</div><div class="sc"><h3 data-en="Seamless enterprise integration">기업과 매끄럽게 통합</h3><p data-en="We're actively reaching out to companies to integrate Tessera end-to-end. Confirmed partners will be listed right here.">기업에 적극적으로 접촉해 Tessera를 엔드 투 엔드로 통합합니다. 확정되는 파트너는 바로 이 자리에 게재됩니다.</p><div class="tags"><span data-en="Partnerships">파트너십</span></div></div></div>
+    </div>
+
+    <div class="partners reveal">
+      <span class="plabel" data-en="Partners — to be announced">파트너 — 확정 시 게재</span>
+      <div class="pslots"><span></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SUPPORT ===================== -->
+<section class="band slide" id="support" data-title="지원" data-en-title="Support">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 08 ]</span>
+      <h2 data-en="We're looking for mentorship">멘토십을 찾고 있습니다</h2>
+      <span class="sp" data-en="In the following fields">아래 분야에서</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:clamp(20px,3vh,28px);font-size:clamp(16px,1.5vw,20px)" data-en="We're searching for mentorship in the following fields — each expert helps turn one specific piece of the plan into evidence.">
+      아래 분야에서 멘토십을 찾고 있습니다 — 각 분야의 전문가가 계획의 한 부분을 함께 증거로 만들어 주십니다.
+    </p>
+
+    <div class="asks reveal">
+      <div class="ask"><span class="role" data-en="Clinicians · hospital ops">의료 현장 · 병원 운영</span><h3 data-en="Validate the care-side KPIs">현장 KPI 검증</h3><p data-en="Measure check-in time, data-entry error rate, and emergency-data lookup speed before/after Tessera — and pressure-test the hospital workflow.">체크인 시간, 정보입력 오류율, 응급정보 조회 속도를 Before/After로 측정하고 병원 워크플로우를 검증해 주세요.</p></div>
+      <div class="ask"><span class="role" data-en="Security · AI infra">보안 · AI 인프라</span><h3 data-en="Stress-test security &amp; ML">보안·ML 검증</h3><p data-en="Review the AES-256 / Zero-Trust / tamper-proof design and the OMOP CDM de-identification, and advise on GPU resources and the OCR/triage ML pipeline.">AES-256 / Zero-Trust / 탬퍼 프루프 설계와 OMOP CDM 비식별을 검토하고, GPU 자원과 OCR·응급분류 ML 파이프라인을 조언해 주세요.</p></div>
+      <div class="ask"><span class="role" data-en="Investors · finance">투자자 · 재무</span><h3 data-en="Validate TAM &amp; valuation">TAM·밸류에이션 검증</h3><p data-en="Pressure-test the ₩0.6–0.7T SOM and ₩15T TAM, the price sheet, and the recurring-revenue logic from an investor's lens.">₩6~7천억 SOM과 ₩15조 TAM, 단가표, 반복 매출 논리를 투자자 관점에서 검증해 주세요.</p></div>
+      <div class="ask"><span class="role" data-en="Industrial safety · EMS">산업안전 · 응급</span><h3 data-en="Confirm the field need">현장 필요성 인증</h3><p data-en="Confirm where Tessera removes real bottlenecks in serious-accident sites and emergency response, and how to enter under the 2022 safety mandate.">중대재해 현장과 응급 대응에서 Tessera가 실제 병목을 없애는 지점, 그리고 2022 안전 의무 하의 진입 방법을 확인해 주세요.</p></div>
+      <div class="ask"><span class="role" data-en="Manufacturing partners">제조 파트너</span><h3 data-en="De-risk production">생산 리스크 완화</h3><p data-en="Advise on dual-sourced manufacturing — HDPE injection molding and NFC-PCB embedding — to scale hardware without heavy fixed capital.">HDPE 사출 성형과 NFC-PCB 임베딩의 이원화 외주 생산을 조언해, 고정 자본 부담 없이 하드웨어를 확장하게 도와주세요.</p></div>
+      <div class="ask"><span class="role" data-en="Policy · public procurement">정책 · 공공조달</span><h3 data-en="Map the procurement path">조달 경로 안내</h3><p data-en="Map the route through innovative-product designation and public procurement, using the defense beachhead as the credibility anchor.">혁신제품 지정과 공공조달 경로를 안내하고, 국방 교두보를 신뢰 기반으로 활용하는 길을 잡아 주세요.</p></div>
+    </div>
+
+    <div class="fund reveal">
+      <div class="f"><span class="stage">Seed</span><b data-en="₩250M">₩2.5억</b><span data-en="Pre-startup package + youth startup fund">예비창업패키지 + 청년전용창업자금</span></div>
+      <div class="f"><span class="stage">Series A</span><b data-en="₩1B">₩10억</b><span data-en="Civilian production + SaaS platform">민간 생산 + SaaS 플랫폼</span></div>
+      <div class="f"><span class="stage">Series B</span><b data-en="₩5B">₩50억</b><span data-en="Global market expansion">해외 시장 확장</span></div>
+      <div class="f"><span class="stage">IPO</span><b data-en="₩100B">₩1,000억</b><span data-en="Target valuation (KOSDAQ)">목표 기업가치 (코스닥)</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 08 TEAM ===================== -->
+<section class="band slide" id="team" data-title="팀" data-en-title="Team" style="background:var(--paper-2)">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 09 ]</span>
+      <h2 data-en="The team">팀</h2>
+      <span class="sp" data-en="They saw the problem firsthand">문제를 직접 본 사람들</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:30px" data-en="A five-person KATUSA team (8th US Army Korea support group) that observed the bottleneck in ROK–US combined exercises — combining engineering, finance and design from top global programs.">
+      한미연합훈련에서 병목을 직접 목격한 미8한국군지원단 소속 카투사 5인 연합팀 — 글로벌 명문의 공학·재무·디자인 역량을 결합했습니다.
+    </p>
+
+    <div class="teamgrid reveal">
+      <div class="member"><div class="av">현</div><div class="nm" data-en="Hyeonkyo Kim">김현교</div><div class="ro" data-en="Business &amp; strategy">사업 · 전략</div><div class="cr" data-en="Univ. of Chicago. Finance &amp; Model-UN club lead. Deloitte Corporate Development intern. Designs the revenue model &amp; go-to-market.">시카고대. 재무·모의유엔 동아리 리더. 딜로이트 안진 Corporate Development 인턴. 수익모델·시장 진입 설계.</div></div>
+      <div class="member"><div class="av">세</div><div class="nm" data-en="David Chang">장세헌</div><div class="ro" data-en="Security · software · hardware">보안 · 소프트웨어 · 하드웨어</div><div class="cr" data-en="UT Austin CS &amp; EE. Co-author of 2 SCI medical-AI papers. Built dementia-prevention VR at CES-winning Looxid Labs.">UT Austin CS·EE 복수전공. 의료 AI SCI 논문 2건 공저. CES 우승 룩시드랩스에서 치매예방 VR 개발.</div></div>
+      <div class="member"><div class="av">효</div><div class="nm" data-en="Alfonso Jon">전효민</div><div class="ro" data-en="Planning · tag · ideation">기획 · 인식표 · 아이디어</div><div class="cr" data-en="Purdue Computer Engineering. Multi-disciplinary hardware projects. VEX Robotics World — Korea rep, runner-up.">Purdue 컴퓨터공학. 전자·재료·기계 복합공학 프로젝트 다수. VEX 로보틱스 세계대회 한국대표 준우승.</div></div>
+      <div class="member"><div class="av">은</div><div class="nm" data-en="Eunjun Choi">최은준</div><div class="ro" data-en="Product design · 3D printing · video">제품 디자인 · 3D 프린팅 · 영상 편집</div><div class="cr" data-en="Hongik Univ. Industrial Design. Industry-academia projects incl. Samsung. Led product-design contracts.">홍익대 산업디자인. 삼성생명 등 산학 프로젝트. 제품 디자인 외주 총괄.</div></div>
+      <div class="member"><div class="av">환</div><div class="nm" data-en="Hwanseung Kim">김환승</div><div class="ro" data-en="Review · strategy">검수 · 전략</div><div class="cr" data-en="Busan Science HS. Univ. of Seoul Architectural Eng. Engineering startup competitions; multiple papers.">부산과학고. 서울시립대 건축공학. 수·과학 공학 창업대회 참가. 논문 작성 경험 다수.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="footer slide" id="contact" data-title="함께해요" data-en-title="Get in touch">
+  <div class="wrap">
+    <div class="footcta reveal">
+      <h2 data-en="Help us turn <span class='em'>seconds</span> into lives saved — and a defense pilot into a category-defining company.">
+        <span class="em">몇 초</span>를 살린 생명으로, 그리고 국방 실증을 카테고리를 만드는 회사로 — 함께해 주세요.
+      </h2>
+      <a class="btn primary" href="mailto:seheon.chang@gmail.com"><span data-en="Get in touch">연락하기</span> <span class="arr">→</span></a>
+    </div>
+    <div class="barcode light thin" style="margin:8px 0 26px"></div>
+    <div class="footrow">
+      <div class="fl">
+        <img src="assets/tessera_lockup_white.png" alt="Tessera" />
+      </div>
+      <div class="meta">
+        <div data-en="Tessera — NFC offline identity &amp; emergency-data platform">Tessera — NFC 오프라인 신원·응급정보 플랫폼</div>
+        <div><a href="mailto:seheon.chang@gmail.com">seheon.chang@gmail.com</a></div>
+        <div><a href="https://davidseheonchang.vercel.app" target="_blank" rel="noopener">davidseheonchang.vercel.app</a></div>
+        <div data-en="ROK MND Startup Competition · Healthcare · Industrial · Defense">대한민국 국방부 창업경진대회 · 의료 · 산업안전 · 국방</div>
+      </div>
+    </div>
+    <p class="note" data-en="This site is a working thesis. Market figures (SOM ₩0.6–0.7T, TAM ₩15T, unit prices) are working assumptions to be finalized with source data — hospital counts, patient throughput, and the price sheet — before external citation.">
+      이 사이트는 검토용 사업안입니다. 시장 수치(SOM ₩6~7천억, TAM ₩15조, 단가)는 외부 인용 전 근거자료 — 병원 수, 환자 처리량, 단가표 — 로 확정해야 할 작업 가정값입니다.
+    </p>
+  </div>
+</footer>
+
+</div><!-- /.deck -->
+</main>
+
+<!-- deck navigation -->
+<div class="deckprog" id="deckProg"></div>
+<div class="deckctrl" role="group" aria-label="슬라이드 이동 / Slide navigation">
+  <button class="navb" id="prevBtn" type="button" aria-label="이전 슬라이드 / Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="ctrmid"><b><i id="ctrNow">01</i> / <span id="ctrTot">10</span></b><span id="ctrTitle">Tessera</span></div>
+  <button class="navb" id="nextBtn" type="button" aria-label="다음 슬라이드 / Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+</div>
+<div class="deckhint" id="deckHint" data-en="← → / swipe">← → · 스와이프</div>
+
+<script>
+(function(){
+  "use strict";
+  var docEl = document.documentElement;
+  var koBtn = document.getElementById('koBtn');
+  var enBtn = document.getElementById('enBtn');
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var deckRender = null; // set by the slide-deck setup; re-renders the slide counter/title on language switch
+
+  var TITLE = {
+    ko: 'Tessera — 통신이 끊겨도, 사람이 말하지 못해도 읽어내는 신원·응급정보 인프라',
+    en: 'Tessera — Identity & emergency data, even when networks fail and people cannot speak'
+  };
+
+  // a single formatter so the count-up end-state and the language toggle always agree
+  function statText(el){
+    var t = parseFloat(el.getAttribute('data-count'));
+    var dec = (t % 1 !== 0) ? 1 : 0;
+    var en = docEl.getAttribute('data-lang') === 'en';
+    var sf = (en && el.getAttribute('data-en-suffix') !== null)
+      ? el.getAttribute('data-en-suffix') : (el.getAttribute('data-suffix') || '');
+    return '₩' + (dec > 0 ? t.toFixed(dec) : String(Math.round(t))) + sf;
+  }
+
+  // i18n: Korean is the source-of-truth in the DOM; swap to English via data-en.
+  // NOTE: never nest a [data-en] inside another [data-en] — the swap caches innerHTML, so a
+  // nested translatable node would bake one language into the other's snapshot. Guard below skips them.
+  function setLang(lang){
+    var en = (lang === 'en');
+    docEl.setAttribute('data-lang', lang);
+    docEl.setAttribute('lang', en ? 'en' : 'ko');
+    document.title = en ? TITLE.en : TITLE.ko;
+    var nodes = document.querySelectorAll('[data-en]');
+    for (var i=0;i<nodes.length;i++){
+      var el = nodes[i];
+      if (el.parentElement && el.parentElement.closest('[data-en]')) continue; // defensive: skip nested
+      if (!el.hasAttribute('data-ko')) el.setAttribute('data-ko', el.innerHTML);
+      el.innerHTML = en ? el.getAttribute('data-en') : el.getAttribute('data-ko');
+    }
+    // finalize stat counters (stops any in-flight count-up so the unit never flickers)
+    var stats = document.querySelectorAll('[data-count]');
+    for (var j=0;j<stats.length;j++){ stats[j]._fin = true; stats[j].textContent = statText(stats[j]); }
+    koBtn.classList.toggle('on', !en); enBtn.classList.toggle('on', en);
+    koBtn.setAttribute('aria-pressed', String(!en)); enBtn.setAttribute('aria-pressed', String(en));
+    if (deckRender) deckRender();
+    try { localStorage.setItem('tessera-lang', lang); } catch(e){}
+  }
+  koBtn.addEventListener('click', function(){ setLang('ko'); });
+  enBtn.addEventListener('click', function(){ setLang('en'); });
+  var stored = null; try { stored = localStorage.getItem('tessera-lang'); } catch(e){}
+  if (stored === 'en') setLang('en'); else document.title = TITLE.ko;
+
+  // video facade: autoplay when hosted (http/https), click-to-play poster when opened as a local file
+  var holder = document.getElementById('vidHolder');
+  var poster = document.getElementById('videoPoster');
+  function loadEmbed(){
+    if (!holder || holder.querySelector('iframe')) return;
+    var f = document.createElement('iframe');
+    f.src = holder.getAttribute('data-embed');
+    f.title = 'Tessera demo video';
+    f.setAttribute('allow','accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+    f.allowFullscreen = true;
+    f.addEventListener('load', function(){ if (poster) poster.style.display = 'none'; });
+    holder.insertBefore(f, holder.firstChild);
+  }
+  function unloadEmbed(){ // remove the iframe so the video stops when you leave the slide
+    if (!holder) return;
+    var f = holder.querySelector('iframe');
+    if (f){ f.parentNode.removeChild(f); if (poster) poster.style.display = ''; }
+  }
+  var isFile = location.protocol === 'file:';
+  if (poster && holder){
+    poster.addEventListener('click', function(){
+      if (isFile){
+        var w = window.open(holder.getAttribute('data-watch'), '_blank', 'noopener');
+        if (!w) location.href = holder.getAttribute('data-watch'); // popup blocked → same-tab
+      } else { loadEmbed(); }
+    });
+    // NOTE: hosted autoplay is NOT triggered here — the deck loads it only when slide #video is reached.
+  }
+
+  // mobile menu (class-driven; CSS owns visibility per breakpoint)
+  var menuBtn = document.getElementById('menuBtn');
+  var mobileMenu = document.getElementById('mobileMenu');
+  function setMenu(open){
+    mobileMenu.style.display = open ? 'block' : 'none';
+    menuBtn.setAttribute('aria-expanded', String(open));
+  }
+  if (menuBtn && mobileMenu){
+    menuBtn.addEventListener('click', function(){ setMenu(mobileMenu.style.display !== 'block'); });
+    mobileMenu.addEventListener('click', function(e){ if (e.target.tagName === 'A') setMenu(false); });
+  }
+
+  // reveal on scroll
+  var reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window && !reduceMotion){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if (en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, { threshold:0.12, rootMargin:'0px 0px -8% 0px' });
+    reveals.forEach(function(r){ io.observe(r); });
+  } else {
+    reveals.forEach(function(r){ r.classList.add('in'); });
+  }
+
+  // count-up for hero stats
+  var counters = document.querySelectorAll('[data-count]');
+  function animate(el){
+    var target = parseFloat(el.getAttribute('data-count'));
+    var dec = (target % 1 !== 0) ? 1 : 0;
+    el._fin = false;
+    var start = null, dur = 1100;
+    function tick(ts){
+      if (el._fin) return;                 // language toggle finalized this stat — stop
+      if (!start) start = ts;
+      var p = Math.min((ts-start)/dur, 1);
+      var eased = 1 - Math.pow(1-p, 3);
+      var en = docEl.getAttribute('data-lang') === 'en';
+      var sf = (en && el.getAttribute('data-en-suffix') !== null)
+        ? el.getAttribute('data-en-suffix') : (el.getAttribute('data-suffix') || '');
+      var v = target * eased;
+      el.textContent = '₩' + (dec > 0 ? v.toFixed(dec) : String(Math.round(v))) + sf;
+      if (p < 1) requestAnimationFrame(tick);
+      else { el._fin = true; el.textContent = statText(el); }
+    }
+    requestAnimationFrame(tick);
+  }
+  if ('IntersectionObserver' in window && !reduceMotion){
+    var io2 = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if (en.isIntersecting){ animate(en.target); io2.unobserve(en.target); } });
+    }, { threshold:0.6 });
+    counters.forEach(function(c){ io2.observe(c); });
+  } else {
+    counters.forEach(function(c){ c._fin = true; c.textContent = statText(c); }); // no IO / reduced motion
+  }
+
+  // ---- horizontal slide deck ----
+  var deck = document.getElementById('deck');
+  if (deck){
+    var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+    var prevBtn = document.getElementById('prevBtn'),
+        nextBtn = document.getElementById('nextBtn'),
+        ctrNow  = document.getElementById('ctrNow'),
+        ctrTot  = document.getElementById('ctrTot'),
+        ctrTitle= document.getElementById('ctrTitle'),
+        prog    = document.getElementById('deckProg');
+    var idx = 0;
+    var videoIdx = slides.indexOf(document.getElementById('video')); // play the embed only on this slide
+    var vidT = null;
+    function pad(n){ return (n < 10 ? '0' : '') + n; }
+    if (ctrTot) ctrTot.textContent = pad(slides.length);
+    // auto-number the [ NN ] section labels to match deck position (self-maintaining on reorder)
+    for (var sn = 0; sn < slides.length; sn++){
+      var sx = slides[sn].querySelector('.shead .sidx');
+      if (sx && /^\s*\[\s*\d/.test(sx.textContent)) sx.textContent = '[ ' + pad(sn + 1) + ' ]';
+    }
+    function titleOf(i){
+      var s = slides[i], en = docEl.getAttribute('data-lang') === 'en';
+      return (en && s.getAttribute('data-en-title')) ? s.getAttribute('data-en-title') : (s.getAttribute('data-title') || '');
+    }
+    function render(){
+      if (ctrNow) ctrNow.textContent = pad(idx + 1);
+      if (ctrTitle) ctrTitle.textContent = titleOf(idx);
+      if (prog) prog.style.width = (slides.length > 1 ? (idx / (slides.length - 1)) * 100 : 100) + '%';
+      if (prevBtn) prevBtn.disabled = idx <= 0;
+      if (nextBtn) nextBtn.disabled = idx >= slides.length - 1;
+    }
+    deckRender = render;
+    function go(i, smooth){
+      i = Math.max(0, Math.min(slides.length - 1, i));
+      deck.scrollTo({ left: slides[i].offsetLeft, behavior: (smooth === false || reduceMotion) ? 'auto' : 'smooth' });
+    }
+    // load/play the YouTube embed only while the video slide is the current one; unload elsewhere
+    function syncVideo(){
+      if (typeof isFile !== 'undefined' && isFile) return; // file:// keeps the click-to-play poster
+      if (videoIdx < 0) return;
+      if (idx === videoIdx) loadEmbed(); else unloadEmbed();
+    }
+    function scheduleVideoSync(){ clearTimeout(vidT); vidT = setTimeout(syncVideo, 160); } // wait until scrolling settles
+    var raf = null;
+    deck.addEventListener('scroll', function(){
+      if (raf) return;
+      raf = requestAnimationFrame(function(){
+        raf = null;
+        var w = deck.clientWidth || 1;
+        var i = Math.max(0, Math.min(slides.length - 1, Math.round(deck.scrollLeft / w)));
+        if (i !== idx){ idx = i; render(); }
+        scheduleVideoSync();
+      });
+    }, { passive:true });
+    if (prevBtn) prevBtn.addEventListener('click', function(){ go(idx - 1); });
+    if (nextBtn) nextBtn.addEventListener('click', function(){ go(idx + 1); });
+    // arrow keys page between slides; up/down stay free for scrolling a tall slide
+    window.addEventListener('keydown', function(e){
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      if (e.key === 'ArrowRight'){ go(idx + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft'){ go(idx - 1); e.preventDefault(); }
+      else if (e.key === 'Home'){ go(0); e.preventDefault(); }
+      else if (e.key === 'End'){ go(slides.length - 1); e.preventDefault(); }
+    });
+    // in-page anchors (nav links, CTAs, skip, brand) jump to the slide that holds the target
+    var anchors = document.querySelectorAll('a[href^="#"]');
+    for (var a = 0; a < anchors.length; a++){
+      anchors[a].addEventListener('click', function(e){
+        var id = this.getAttribute('href').slice(1); if (!id) return;
+        var t = document.getElementById(id); if (!t) return;
+        var s = t.classList && t.classList.contains('slide') ? t : (t.closest ? t.closest('.slide') : null);
+        var i = s ? slides.indexOf(s) : -1;
+        if (i >= 0){ e.preventDefault(); go(i); }
+      });
+    }
+    var rt = null;
+    window.addEventListener('resize', function(){ clearTimeout(rt); rt = setTimeout(function(){ go(idx, false); }, 150); });
+    render();
+    scheduleVideoSync(); // sync once on load (no video on slide 1; plays if loaded directly on the video slide)
+  }
+})();
+</script>
+</body>
+</html>
