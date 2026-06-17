@@ -307,6 +307,18 @@ ul.ticks li::before{content:"";position:absolute;left:2px;top:16px;width:7px;hei
 .eqbar{margin-top:12px;border:1px solid var(--ink);border-radius:12px;background:var(--ink-panel);color:var(--paper);padding:14px 20px;font-family:var(--fmono);font-size:clamp(12px,1.4vw,15px);letter-spacing:.02em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .eqbar .x{color:var(--signal);font-weight:600}
 
+.milterm .texp{font-weight:600}
+/* compress the build-up slide so it fits one screen */
+#milmodel .lead{margin-bottom:clamp(10px,1.6vh,16px)}
+#milmodel .tam-anchor{margin-bottom:12px}
+#milmodel .tam-anchor .a{padding:11px 16px}
+#milmodel .tier .th{padding:12px 20px}
+#milmodel .formula{flex-wrap:nowrap;gap:10px}
+#milmodel .term{padding:11px 12px;flex:1 1 0;min-width:0}
+#milmodel .formula .plus{padding:0;font-size:22px}
+#milmodel .eqbar{margin-top:10px;padding:11px 18px}
+#milmodel .small{margin-top:9px}
+
 /* ---------- win list ---------- */
 .winlist{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border:1px solid var(--hair);border-radius:16px;overflow:hidden;background:var(--card)}
 .win{padding:clamp(22px,2.6vw,30px);border-right:1px solid var(--hair);border-bottom:1px solid var(--hair);position:relative}
@@ -571,10 +583,11 @@ html[data-lang="en"] .wbig{font-family:var(--fdisp)}
   <div class="statline reveal" style="transition-delay:.2s">
     <div class="st"><b data-en="₩700B">₩7,000억</b><span data-en="Domestic SOM — hospitals + industrial (₩600–700B)">국내 SOM — 병원+산업 (6,000~7,000억)</span></div>
     <div class="st"><b data-en="₩15T">₩15조</b><span data-en="Target TAM — patients × hospital revenue (+industrial)">목표 TAM — 환자수×병원매출 (+산업재해)</span></div>
+    <div class="st"><b style="color:var(--signal)" data-en="₩4.76B">₩47.6억</b><span data-en="Validated military model — FY5 revenue · break-even in year 1">검증된 군 모델 — FY5 매출 · 손익분기 1년차</span></div>
     <div class="st"><b style="font-size:clamp(15px,1.7vw,19px);line-height:1.18" data-en="Honorable Mention (7th)">장려상(7등) 수상</b><span data-en="ROK Army startup competition · awarded among 650 teams">육군 창업경진대회 650팀 중 수상</span></div>
     <div class="st"><b style="font-size:clamp(14px,1.6vw,18px);line-height:1.18" data-en="Military-grade cybersecurity">군용 등급 사이버보안</b><span data-en="OMOP CDM de-identification · AES-256 · Zero-Trust">OMOP CDM 비식별 · AES-256 · Zero-Trust</span></div>
   </div>
-  <p class="small reveal" style="margin-top:12px" data-en="Market figures are working estimates, to be finalized with source data (hospital count · patient throughput · price sheet).">시장 수치는 근거자료(병원 수 · 환자 처리량 · 단가표)로 확정할 추정값입니다.</p>
+  <p class="small reveal" style="margin-top:12px" data-en="Healthcare / industrial market figures are working estimates (to be finalized with source data); the military model is a sourced, bottom-up estimate.">의료·산업 시장 수치는 근거자료(병원 수·환자 처리량·단가표)로 확정할 추정값이며, 군 모델은 공개 근거 기반의 bottom-up 추정입니다.</p>
  </div>
 </header>
 
@@ -730,8 +743,8 @@ html[data-lang="en"] .wbig{font-family:var(--fdisp)}
       <h2 data-en="Market &amp; TAM — three fronts, SOM first">시장 · TAM — 세 방향, SOM부터</h2>
       <span class="sp" data-en="Each layer = sum of three (parentheses)">각 단계 = 세 방향의 (괄호) 합</span>
     </div>
-    <p class="lead reveal" style="margin-bottom:clamp(20px,3vh,28px);font-size:clamp(16px,1.5vw,20px)" data-en="Three fronts at once — healthcare, industrial safety, and the army. Each layer (SOM · SAM · TAM) is the sum of the three in (parentheses). These figures will be updated as the plan firms up.">
-      세 방향에 동시에 — 의료 · 산업재해 · 군. 각 단계(SOM · SAM · TAM)를 세 방향의 (괄호) 합으로 계산합니다. <b style="color:var(--ink)">수치는 사업이 구체화되며 갱신됩니다.</b>
+    <p class="lead reveal" style="margin-bottom:clamp(20px,3vh,28px);font-size:clamp(16px,1.5vw,20px)" data-en="Three fronts at once — healthcare, industrial safety, and the army. Each layer is the sum of the three in (parentheses). <b style='color:var(--ink)'>Healthcare & industrial are top-down estimates; the army is a sourced, bottom-up model (next two pages).</b>">
+      세 방향에 동시에 — 의료 · 산업재해 · 군. 각 단계를 세 방향의 (괄호) 합으로 봅니다. <b style="color:var(--ink)">의료·산업은 top-down 추정, 군은 근거 기반 bottom-up 모델(다음 2개 페이지)</b>입니다.
     </p>
 
     <div class="tam-anchor reveal">
@@ -769,7 +782,7 @@ html[data-lang="en"] .wbig{font-family:var(--fdisp)}
           <span class="plus">+</span>
           <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Industrial">산업재해</div><div class="texp" data-en="construction · manufacturing · plant · fire">건설 · 제조 · 플랜트 · 소방</div></div><span class="paren pr">)</span></div>
           <span class="plus">+</span>
-          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Army">군</div><div class="texp" data-en="all units — tags · scanners · SW">전군 — 인식표 · 스캐너 · SW</div></div><span class="paren pr">)</span></div>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Army">군</div><div class="texp" data-en="all units → ₩4.76→6.68B/yr (sourced)">전군 보급 → ₩47.6→66.8억/년 (근거 기반)</div></div><span class="paren pr">)</span></div>
         </div>
       </div>
     </div>
@@ -797,7 +810,7 @@ html[data-lang="en"] .wbig{font-family:var(--fdisp)}
           <span class="plus">+</span>
           <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Industrial">산업재해</div><div class="texp" data-en="pilot worksites × workers × price">거점 현장 × 인원 × 단가</div></div><span class="paren pr">)</span></div>
           <span class="plus">+</span>
-          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Army">군</div><div class="texp" data-en="initial unit rollout + software">초기 부대 보급 + SW</div></div><span class="paren pr">)</span></div>
+          <div class="term"><span class="paren pl">(</span><div class="in"><div class="tlab" data-en="Army">군</div><div class="texp" data-en="initial rollout 20→40% · ₩0.7–1.7B/yr">초기 보급 20→40% · ₩7–17억/년</div></div><span class="paren pr">)</span></div>
         </div>
         <div style="padding:0 22px 18px"><span class="assume"><i></i><span data-en="Figures will be updated with source data (counts · throughput · unit price).">수치는 근거자료(수량·처리량·단가)로 갱신됩니다.</span></span></div>
       </div>
@@ -826,6 +839,58 @@ html[data-lang="en"] .wbig{font-family:var(--fdisp)}
       <span class="x">+</span>
       <span data-en="( SW · AI license × orgs )">( SW · AI 라이선스 × 기관 )</span>
     </div>
+  </div>
+</section>
+
+<!-- ===================== MILITARY MODEL · REVENUE BUILD-UP ===================== -->
+<section class="band slide" id="milmodel" data-title="군 모델·매출" data-en-title="Military model">
+  <div class="wrap">
+    <div class="shead reveal">
+      <span class="sidx">[ 08 ]</span>
+      <h2 data-en="Military model — how the revenue is built">군 납품 모델 — 매출은 어떻게 쌓이는가</h2>
+      <span class="sp" data-en="Bottom-up · sourced">Bottom-up · 근거 기반</span>
+    </div>
+    <p class="lead reveal" style="margin-bottom:clamp(16px,2.4vh,24px);font-size:clamp(16px,1.5vw,20px)" data-en="Defense is our validation beachhead. Across 450K service members, a one-time tag + scanner sale carries an annual security-SW + SaaS license on top — revenue that <b style='color:var(--ink)'>recurs every year</b>.">
+      국방은 우리의 검증 교두보입니다. 45만 장병을 대상으로, 인식표·스캐너 1회 매출 위에 보안SW·SaaS 라이선스가 <b style="color:var(--ink)">매년 반복</b>됩니다.
+    </p>
+
+    <div class="tam-anchor reveal">
+      <div class="a"><b data-en="450K">45만</b><span data-en="service members (270K/70K/110K)">대상 장병 (병27·장교7·부사관11만)</span></div>
+      <div class="a"><b data-en="196K">19.6만</b><span data-en="new intake / yr (enlist + commission)">연 신규 유입 (입영·임관)</span></div>
+      <div class="a"><b>20→100%</b><span data-en="5-yr rollout ramp">5년 보급률 램프</span></div>
+      <div class="a"><b data-en="15K units">1.5만대</b><span data-en="operating scanner cap (30 tags : 1)">운용 인식기 상한 (표30 : 기1)</span></div>
+    </div>
+
+    <div class="ladder reveal">
+      <div class="tier som">
+        <div class="th">
+          <div class="lab"><span class="tt" data-en="FY5 military revenue">FY5 군 매출</span><span class="d" data-en="at full 100% rollout">정규 보급 100% 도달</span></div>
+          <div class="val" data-en="₩4.76B">₩47.6억</div>
+        </div>
+        <div class="formula">
+          <div class="term milterm"><div class="in"><div class="tlab" data-en="Tags">인식표</div><div class="texp" data-en="₩0.66B">₩6.6억</div><div class="tnote" data-en="FY5: 219K tags × ₩3,000">FY5 21.9만개 × ₩3,000</div></div></div>
+          <span class="plus">+</span>
+          <div class="term milterm"><div class="in"><div class="tlab" data-en="Scanners">인식기</div><div class="texp" data-en="₩0.19B">₩1.9억</div><div class="tnote" data-en="3,875 units × ₩50,000">3,875대 × ₩50,000</div></div></div>
+          <span class="plus">+</span>
+          <div class="term milterm"><div class="in"><div class="tlab" data-en="Security SW ↻">보안 SW ↻</div><div class="texp" data-en="₩2.8B">₩28.0억</div><div class="tnote" data-en="10K scanners × ₩280K/yr">운용 1.0만대 × ₩28만/년</div></div></div>
+          <span class="plus">+</span>
+          <div class="term milterm"><div class="in"><div class="tlab" data-en="SaaS ↻">SaaS ↻</div><div class="texp" data-en="₩1.0B">₩10.0억</div><div class="tnote" data-en="10K scanners × ₩100K/yr">운용 1.0만대 × ₩10만/년</div></div></div>
+          <span class="plus">+</span>
+          <div class="term milterm"><div class="in"><div class="tlab" data-en="Maintenance ↻">유지보수 ↻</div><div class="texp" data-en="₩0.1B">₩1.0억</div><div class="tnote" data-en="12% of hardware revenue">HW 매출의 12%</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="eqbar reveal" style="margin-top:12px">
+      <span class="x" data-en="RECURRING ↻">반복 매출 ↻</span>
+      <span data-en="Security SW + SaaS = ₩3.8B · 80% of revenue">보안SW + SaaS = ₩38억 · 매출의 80%</span>
+      <span class="x">·</span>
+      <span data-en="hardware sells once, software bills every year">하드웨어는 1회, 소프트웨어는 매년</span>
+    </div>
+
+    <p class="small reveal" style="margin-top:13px" data-en="Basis — troops: Chosun (2025) · intake: KOSIS / MMA · unit-price benchmarks: Hexnode · Esper · CrowdStrike. Full model in the TESSERA calculation workbook.">
+      근거 — 장병 수: Chosun(2025) · 입영: KOSIS/병무청 · 단가 벤치마크: Hexnode·Esper·CrowdStrike. 전체 모델은 TESSERA 산출 워크북.
+    </p>
   </div>
 </section>
 
@@ -942,8 +1007,8 @@ html[data-lang="en"] .wbig{font-family:var(--fdisp)}
         <div data-en="ROK MND Startup Competition · Healthcare · Industrial · Defense">대한민국 국방부 창업경진대회 · 의료 · 산업안전 · 국방</div>
       </div>
     </div>
-    <p class="note" data-en="This site is a working thesis. Market figures (SOM ₩0.6–0.7T, TAM ₩15T, unit prices) are working assumptions to be finalized with source data — hospital counts, patient throughput, and the price sheet — before external citation.">
-      이 사이트는 검토용 사업안입니다. 시장 수치(SOM ₩6~7천억, TAM ₩15조, 단가)는 외부 인용 전 근거자료 — 병원 수, 환자 처리량, 단가표 — 로 확정해야 할 작업 가정값입니다.
+    <p class="note" data-en="This site is a working thesis. The healthcare/industrial market figures (SOM ₩0.6–0.7T, TAM ₩15T) are working assumptions to be finalized with source data — hospital counts, patient throughput, price sheet — before external citation. The military model (FY5 revenue ₩4.76B · break-even FY1) is a bottom-up estimate built on public troop/intake data and published unit-price benchmarks.">
+      이 사이트는 검토용 사업안입니다. 의료·산업 시장 수치(SOM ₩6~7천억, TAM ₩15조)는 외부 인용 전 근거자료 — 병원 수·환자 처리량·단가표 — 로 확정할 작업 가정값입니다. 군 납품 모델(FY5 매출 ₩47.6억 · 손익분기 FY1)은 공개 인원·입영 데이터와 공개 단가 벤치마크에 기반한 bottom-up 추정입니다.
     </p>
   </div>
 </footer>
